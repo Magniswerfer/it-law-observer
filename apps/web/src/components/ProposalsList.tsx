@@ -59,7 +59,7 @@ export default function ProposalsList({
   if (error) {
     return (
       <div className="rounded-3xl border border-[color:color-mix(in_oklab,var(--rose)_40%,transparent)] bg-[color:color-mix(in_oklab,var(--rose)_10%,white)] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.06)]">
-        <div className="text-sm font-medium text-[color:var(--ink)]">Couldn’t load proposals</div>
+        <div className="text-sm font-medium text-[color:var(--ink)]">Kunne ikke hente forslag</div>
         <div className="mt-2 font-[family-name:var(--font-mono)] text-xs text-[color:var(--muted)]">
           {error}
         </div>
@@ -75,10 +75,10 @@ export default function ProposalsList({
             <span className="font-[family-name:var(--font-mono)] text-sm text-[color:var(--muted)]">∅</span>
           </div>
           <h3 className="mt-4 font-[family-name:var(--font-serif)] text-2xl tracking-tight text-[color:var(--ink)]">
-            No matches
+            Ingen resultater
           </h3>
           <p className="mt-2 text-sm leading-relaxed text-[color:var(--muted)]">
-            Try clearing “Topic” or “Search”, or jump back a page.
+            Prøv at rydde “Emne” eller “Søgning”, eller gå en side tilbage.
           </p>
         </div>
       </div>
@@ -92,9 +92,9 @@ export default function ProposalsList({
     <div className="rounded-3xl border border-[color:var(--line)] bg-white/55 shadow-[0_18px_60px_rgba(0,0,0,0.06)] backdrop-blur">
       <div className="flex items-center justify-between gap-4 border-b border-[color:var(--line)] px-6 py-5">
         <div>
-          <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">Results</div>
+          <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">Resultater</div>
           <h2 className="mt-1 font-[family-name:var(--font-serif)] text-2xl tracking-tight text-[color:var(--ink)]">
-            Proposals
+            Forslag
           </h2>
         </div>
         <div className="flex items-center gap-2">
@@ -102,7 +102,7 @@ export default function ProposalsList({
             {pageStart}–{pageEnd}
           </div>
           <div className="rounded-full border border-[color:var(--line)] bg-white/60 px-3 py-1.5 font-[family-name:var(--font-mono)] text-xs text-[color:var(--muted)] shadow-sm">
-            Page {page}
+            Side {page}
           </div>
           <div className="flex items-center gap-1">
             <button
@@ -111,7 +111,7 @@ export default function ProposalsList({
               disabled={!canPrevPage}
               className="rounded-full border border-[color:var(--line)] bg-white/60 px-3 py-1.5 text-xs font-medium text-[color:var(--ink-2)] shadow-sm transition hover:-translate-y-0.5 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
             >
-              Prev
+              Forrige
             </button>
             <button
               type="button"
@@ -119,7 +119,7 @@ export default function ProposalsList({
               disabled={!canNextPage}
               className="rounded-full border border-[color:var(--line)] bg-white/60 px-3 py-1.5 text-xs font-medium text-[color:var(--ink-2)] shadow-sm transition hover:-translate-y-0.5 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
             >
-              Next
+              Næste
             </button>
           </div>
         </div>
@@ -133,7 +133,7 @@ export default function ProposalsList({
 
       <div className="flex items-center justify-between gap-3 border-t border-[color:var(--line)] px-6 py-5">
         <div className="text-xs text-[color:var(--muted)]">
-          Showing <span className="font-[family-name:var(--font-mono)]">{pageStart}–{pageEnd}</span>
+          Viser <span className="font-[family-name:var(--font-mono)]">{pageStart}–{pageEnd}</span>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -142,7 +142,7 @@ export default function ProposalsList({
             disabled={!canPrevPage}
             className="rounded-full border border-[color:var(--line)] bg-white/60 px-3 py-1.5 text-xs font-medium text-[color:var(--ink-2)] shadow-sm transition hover:-translate-y-0.5 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
           >
-            Prev page
+            Forrige side
           </button>
           <button
             type="button"
@@ -150,7 +150,7 @@ export default function ProposalsList({
             disabled={!canNextPage}
             className="rounded-full border border-[color:var(--line)] bg-white/60 px-3 py-1.5 text-xs font-medium text-[color:var(--ink-2)] shadow-sm transition hover:-translate-y-0.5 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
           >
-            Next page
+            Næste side
           </button>
         </div>
       </div>
@@ -207,11 +207,11 @@ function ProposalItem({ proposal }: { proposal: ProposalWithLabel }) {
                     : 'border-[color:color-mix(in_oklab,var(--rose)_38%,transparent)] bg-[color:color-mix(in_oklab,var(--rose)_10%,white)] text-[color:var(--ink)]',
                 ].join(' ')}
               >
-                {proposal.label.it_relevant ? 'IT relevant' : 'Not IT'}
+                {proposal.label.it_relevant ? 'IT-relevant' : 'Ikke IT'}
               </span>
             ) : (
               <span className="inline-flex items-center rounded-full border border-[color:var(--line)] bg-white/40 px-2.5 py-1 text-[11px] font-medium text-[color:var(--muted)] shadow-sm">
-                Unlabeled
+                Ikke vurderet
               </span>
             )}
 
@@ -257,7 +257,7 @@ function ProposalItem({ proposal }: { proposal: ProposalWithLabel }) {
         </div>
 
         <div className="shrink-0 text-right">
-          <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">Updated</div>
+          <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">Opdateret</div>
           <div className="mt-1 font-[family-name:var(--font-mono)] text-xs text-[color:var(--ink-2)]">
             {formatDate(proposal.opdateringsdato)}
           </div>
@@ -268,7 +268,7 @@ function ProposalItem({ proposal }: { proposal: ProposalWithLabel }) {
               target="_blank"
               rel="noreferrer"
               className="mt-3 inline-flex items-center gap-2 rounded-full border border-[color:color-mix(in_oklab,var(--teal)_38%,transparent)] bg-[color:color-mix(in_oklab,var(--teal)_10%,white)] px-3 py-1.5 text-[11px] font-medium text-[color:var(--ink)] shadow-sm transition hover:-translate-y-0.5 hover:bg-white"
-              title="Open main bill PDF (Folketinget)"
+              title="Åbn hoved-PDF (Folketinget)"
             >
               <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-wide">PDF</span>
               <span aria-hidden className="text-[10px] text-[color:var(--muted)]">

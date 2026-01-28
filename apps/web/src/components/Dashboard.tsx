@@ -197,30 +197,17 @@ export default function Dashboard() {
   return (
     <main className="min-h-screen">
       <header className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="inline-flex items-center gap-2 rounded-full border border-[color:color-mix(in_oklab,var(--teal)_35%,transparent)] bg-[color:color-mix(in_oklab,var(--teal)_12%,white)] px-3 py-1.5 text-xs font-medium text-[color:var(--ink)] shadow-[0_1px_0_rgba(0,0,0,0.03)] backdrop-blur">
-                <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--teal)]" />
-                IT relevant only (server-side)
-              </div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-[color:var(--line)] bg-white/55 px-3 py-1.5 text-xs text-[color:var(--muted)] shadow-[0_1px_0_rgba(0,0,0,0.03)] backdrop-blur">
-                Folketinget bills • IT-policy lens
-              </div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-[color:var(--line)] bg-white/55 px-3 py-1.5 text-xs text-[color:var(--muted)] shadow-[0_1px_0_rgba(0,0,0,0.03)] backdrop-blur">
+              Folketingets forslag • IT-politisk fokus
             </div>
-
             <h1 className="mt-4 font-[family-name:var(--font-serif)] text-4xl leading-[1.05] tracking-tight text-[color:var(--ink)] sm:text-5xl">
-              IT Law Observer
+              IT-politisk radar
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[color:var(--muted)] sm:text-base">
-              A radar that only shows bills the backend has already flagged as IT relevant.
+              Et samlet overblik over lov- og beslutningsforslag med betydning for data og digitalisering.
             </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:w-[540px]">
-            <StatCard label="In view" value={stats.total} tone="ink" />
-            <StatCard label="Labeled" value={stats.labeled} tone="teal" />
-            <StatCard label="Avg confidence" value={stats.avgConfidence} suffix="%" tone="muted" />
           </div>
         </div>
 
@@ -228,7 +215,7 @@ export default function Dashboard() {
           {stats.topTopics.length > 0 ? (
             <>
               <div className="text-xs uppercase tracking-[0.18em] text-[color:var(--muted)]">
-                Topics trending in view
+                Emner i denne visning
               </div>
               <div className="h-4 w-px bg-[color:var(--line)]" />
               {stats.topTopics.map(([topic, count]) => (
@@ -247,7 +234,7 @@ export default function Dashboard() {
             </>
           ) : (
             <div className="text-sm text-[color:var(--muted)]">
-              Tip: start typing a topic (e.g. “gdpr”, “cyber”, “digitalisering”) to narrow down the IT feed.
+              Tip: skriv et emne (fx “gdpr”, “cyber”, “digitalisering”) for at afgrænse visningen.
             </div>
           )}
         </div>
@@ -270,36 +257,5 @@ export default function Dashboard() {
         </div>
       </section>
     </main>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  suffix,
-  tone,
-}: {
-  label: string;
-  value: number;
-  suffix?: string;
-  tone: 'ink' | 'teal' | 'rose' | 'muted';
-}) {
-  const toneStyles =
-    tone === 'teal'
-      ? 'border-[color:color-mix(in_oklab,var(--teal)_28%,transparent)] bg-[color:color-mix(in_oklab,var(--teal)_10%,white)] text-[color:var(--teal)]'
-      : tone === 'rose'
-        ? 'border-[color:color-mix(in_oklab,var(--rose)_28%,transparent)] bg-[color:color-mix(in_oklab,var(--rose)_10%,white)] text-[color:var(--rose)]'
-        : tone === 'muted'
-          ? 'border-[color:var(--line)] bg-white/50 text-[color:var(--muted)]'
-          : 'border-[color:var(--line)] bg-white/50 text-[color:var(--ink)]';
-
-  return (
-    <div className={`rounded-2xl border px-4 py-3 shadow-[0_10px_30px_rgba(0,0,0,0.04)] backdrop-blur ${toneStyles}`}>
-      <div className="text-[11px] uppercase tracking-[0.18em]">{label}</div>
-      <div className="mt-1 font-[family-name:var(--font-mono)] text-2xl leading-none text-[color:var(--ink)]">
-        {value}
-        {suffix ? <span className="ml-1 text-base text-[color:var(--muted)]">{suffix}</span> : null}
-      </div>
-    </div>
   );
 }

@@ -1,10 +1,10 @@
 @import "tailwindcss";
 
 :root {
-  --font-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-display: ui-serif, Georgia, "Times New Roman", serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
-    "Courier New", monospace;
+  --font-body: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Newsreader", ui-serif, Georgia, "Times New Roman", serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
 
   --paper: #f6f2e9;
   --paper-2: #f1ecdf;
@@ -13,10 +13,10 @@
   --muted: #6a6156;
   --line: rgba(21, 18, 13, 0.14);
 
-  /* Accents (intentional, not evenly distributed) */
-  --teal: #0a7ea4;
-  --teal-2: #0b9aa8;
-  --rose: #b11e3a;
+  /* Accents (subtle green/red signals) */
+  --teal: #2f7d5f;
+  --teal-2: #3b8f6e;
+  --rose: #b24a3f;
   --gold: #b78b3b;
 }
 
