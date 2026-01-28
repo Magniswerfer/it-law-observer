@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+:root {
+  --font-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: ui-serif, Georgia, "Times New Roman", serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+
+  --paper: #f6f2e9;
+  --paper-2: #f1ecdf;
+  --ink: #15120d;
+  --ink-2: #2a241c;
+  --muted: #6a6156;
+  --line: rgba(21, 18, 13, 0.14);
+
+  /* Accents (intentional, not evenly distributed) */
+  --teal: #0a7ea4;
+  --teal-2: #0b9aa8;
+  --rose: #b11e3a;
+  --gold: #b78b3b;
+}
+
+@theme inline {
+  --color-background: var(--paper);
+  --color-foreground: var(--ink);
+
+  --font-sans: var(--font-body);
+  --font-serif: var(--font-display);
+  --font-mono: var(--font-mono);
+}
+
+body {
+  color: var(--ink);
+  font-family: var(--font-sans);
+  background:
+    radial-gradient(1100px 700px at 12% 0%, color-mix(in oklab, var(--teal) 18%, transparent) 0%, transparent 62%),
+    radial-gradient(900px 600px at 92% 8%, color-mix(in oklab, var(--rose) 14%, transparent) 0%, transparent 60%),
+    linear-gradient(180deg, var(--paper) 0%, var(--paper-2) 55%, var(--paper) 100%);
+}
+
+::selection {
+  background: color-mix(in oklab, var(--teal) 28%, transparent);
+}
+
+/* Subtle “dossier” texture: thin scanlines + fiber hint */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    repeating-linear-gradient(
+      180deg,
+      rgba(21, 18, 13, 0.03) 0px,
+      rgba(21, 18, 13, 0.03) 1px,
+      rgba(21, 18, 13, 0.0) 2px,
+      rgba(21, 18, 13, 0.0) 6px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(21, 18, 13, 0.016) 0px,
+      rgba(21, 18, 13, 0.016) 1px,
+      rgba(21, 18, 13, 0.0) 2px,
+      rgba(21, 18, 13, 0.0) 14px
+    );
+  mix-blend-mode: multiply;
+  opacity: 0.55;
+}
+
+/* Ensure app content sits above the texture overlay */
+main,
+header,
+section,
+footer,
+nav {
+  position: relative;
+  z-index: 1;
+}
+
+@layer base {
+  a {
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+  }
+
+  :focus-visible {
+    outline: 2px solid color-mix(in oklab, var(--teal) 65%, var(--ink));
+    outline-offset: 2px;
+  }
+}
