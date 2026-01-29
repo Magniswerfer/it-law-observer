@@ -6,7 +6,7 @@ export default function Home() {
     <Suspense
       fallback={
         <div className="mx-auto max-w-7xl px-4 py-16 text-[color:var(--muted)] sm:px-6 lg:px-8">
-          Loading radar…
+          Indlæser radar…
         </div>
       }
     >
