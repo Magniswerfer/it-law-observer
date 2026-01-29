@@ -3,6 +3,8 @@
 import Link from 'next/link';
 
 import type { ProposalWithLabel } from '@/types';
+import type { TagFrequency } from '@/lib/tags';
+import { getMergedProposalTags, sortTagsByFrequency } from '@/lib/tags';
 
 export type DashboardState = {
   proposals: ProposalWithLabel[];
@@ -18,6 +20,7 @@ export default function ProposalsList({
   canNextPage,
   onPrevPage,
   onNextPage,
+  tagFrequency,
 }: {
   state: DashboardState;
   page: number;
@@ -26,6 +29,7 @@ export default function ProposalsList({
   canNextPage: boolean;
   onPrevPage: () => void;
   onNextPage: () => void;
+  tagFrequency?: TagFrequency;
 }) {
   const { proposals, loading, error } = state;
 
@@ -127,7 +131,7 @@ export default function ProposalsList({
 
       <div className="divide-y divide-[color:var(--line)]">
         {proposals.map((proposal) => (
-          <ProposalItem key={proposal.id} proposal={proposal} />
+          <ProposalItem key={proposal.id} proposal={proposal} tagFrequency={tagFrequency} />
         ))}
       </div>
 
@@ -158,13 +162,9 @@ export default function ProposalsList({
   );
 }
 
-function ProposalItem({ proposal }: { proposal: ProposalWithLabel }) {
+function ProposalItem({ proposal, tagFrequency }: { proposal: ProposalWithLabel; tagFrequency?: TagFrequency }) {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('da-DK');
-  };
-
-  const getTypeLabel = (prefix: 'L' | 'B') => {
-    return prefix === 'L' ? 'Lovforslag' : 'Beslutningsforslag';
   };
 
   const signalTone = !proposal.label
@@ -189,39 +189,6 @@ function ProposalItem({ proposal }: { proposal: ProposalWithLabel }) {
 
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center rounded-full border border-[color:var(--line)] bg-white/60 px-2.5 py-1 text-[11px] font-medium text-[color:var(--ink-2)] shadow-sm">
-              {getTypeLabel(proposal.nummerprefix as 'L' | 'B')}
-            </span>
-
-            <span className="inline-flex items-center rounded-full border border-[color:var(--line)] bg-white/60 px-2.5 py-1 font-[family-name:var(--font-mono)] text-[11px] text-[color:var(--muted)] shadow-sm">
-              {proposal.nummer}
-            </span>
-
-            {proposal.label ? (
-              <span
-                className={[
-                  'inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium shadow-sm',
-                  proposal.label.it_relevant
-                    ? 'border-[color:color-mix(in_oklab,var(--teal)_38%,transparent)] bg-[color:color-mix(in_oklab,var(--teal)_12%,white)] text-[color:var(--ink)]'
-                    : 'border-[color:color-mix(in_oklab,var(--rose)_38%,transparent)] bg-[color:color-mix(in_oklab,var(--rose)_10%,white)] text-[color:var(--ink)]',
-                ].join(' ')}
-              >
-                {proposal.label.it_relevant ? 'IT-relevant' : 'Ikke IT'}
-              </span>
-            ) : (
-              <span className="inline-flex items-center rounded-full border border-[color:var(--line)] bg-white/40 px-2.5 py-1 text-[11px] font-medium text-[color:var(--muted)] shadow-sm">
-                Ikke vurderet
-              </span>
-            )}
-
-            {proposal.label?.model && (
-              <span className="inline-flex items-center rounded-full border border-[color:var(--line)] bg-white/40 px-2.5 py-1 font-[family-name:var(--font-mono)] text-[10px] text-[color:var(--muted)] shadow-sm">
-                {proposal.label.model}
-              </span>
-            )}
-          </div>
-
           <h3 className="mt-3 min-w-0">
             <Link
               href={`/proposal/${proposal.id}`}
@@ -237,9 +204,16 @@ function ProposalItem({ proposal }: { proposal: ProposalWithLabel }) {
             </p>
           ) : null}
 
-          {proposal.label?.it_topics && proposal.label.it_topics.length > 0 ? (
+          {(() => {
+            const mergedTags = getMergedProposalTags(proposal);
+            const orderedTags = sortTagsByFrequency(mergedTags, tagFrequency);
+            if (orderedTags.length === 0) return null;
+            const shown = orderedTags.slice(0, 4);
+            const remaining = orderedTags.length - shown.length;
+
+            return (
             <div className="mt-3 flex flex-wrap gap-2">
-              {proposal.label.it_topics.slice(0, 4).map((topic) => (
+              {shown.map((topic) => (
                 <span
                   key={topic}
                   className="inline-flex items-center rounded-full border border-[color:var(--line)] bg-[color:color-mix(in_oklab,var(--paper-2)_55%,white)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--ink-2)]"
@@ -247,13 +221,14 @@ function ProposalItem({ proposal }: { proposal: ProposalWithLabel }) {
                   {topic}
                 </span>
               ))}
-              {proposal.label.it_topics.length > 4 ? (
+              {remaining > 0 ? (
                 <span className="inline-flex items-center rounded-full border border-[color:var(--line)] bg-white/40 px-2.5 py-1 font-[family-name:var(--font-mono)] text-[10px] text-[color:var(--muted)]">
-                  +{proposal.label.it_topics.length - 4}
+                  +{remaining}
                 </span>
               ) : null}
             </div>
-          ) : null}
+            );
+          })()}
         </div>
 
         <div className="shrink-0 text-right">
@@ -261,30 +236,37 @@ function ProposalItem({ proposal }: { proposal: ProposalWithLabel }) {
           <div className="mt-1 font-[family-name:var(--font-mono)] text-xs text-[color:var(--ink-2)]">
             {formatDate(proposal.opdateringsdato)}
           </div>
+          <div className="mt-2 font-[family-name:var(--font-mono)] text-[11px] text-[color:var(--ink-2)]">
+            {proposal.nummer}
+          </div>
 
-          {mainPdfUrl ? (
-            <a
-              href={mainPdfUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-3 inline-flex items-center gap-2 rounded-full border border-[color:color-mix(in_oklab,var(--teal)_38%,transparent)] bg-[color:color-mix(in_oklab,var(--teal)_10%,white)] px-3 py-1.5 text-[11px] font-medium text-[color:var(--ink)] shadow-sm transition hover:-translate-y-0.5 hover:bg-white"
-              title="Åbn hoved-PDF (Folketinget)"
-            >
-              <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-wide">PDF</span>
-              <span aria-hidden className="text-[10px] text-[color:var(--muted)]">
-                ↗
-              </span>
-            </a>
-          ) : null}
+          {(mainPdfUrl || confidencePct != null) && (
+            <div className="mt-3 flex flex-col items-end gap-2">
+              {mainPdfUrl ? (
+                <a
+                  href={mainPdfUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 rounded-full border border-[color:color-mix(in_oklab,var(--teal)_38%,transparent)] bg-[color:color-mix(in_oklab,var(--teal)_10%,white)] px-3 py-1.5 text-[11px] font-medium text-[color:var(--ink)] shadow-sm transition hover:-translate-y-0.5 hover:bg-white"
+                  title="Åbn hoved-PDF (Folketinget)"
+                >
+                  <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-wide">PDF</span>
+                  <span aria-hidden className="text-[10px] text-[color:var(--muted)]">
+                    ↗
+                  </span>
+                </a>
+              ) : null}
 
-          {confidencePct != null ? (
-            <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-[color:var(--line)] bg-white/60 px-3 py-1.5 shadow-sm">
-              <span className={`h-2 w-2 rounded-full ${signalTone}`} />
-              <span className="font-[family-name:var(--font-mono)] text-[11px] text-[color:var(--muted)]">
-                {confidencePct}%
-              </span>
+              {confidencePct != null ? (
+                <div className="inline-flex items-center gap-2 rounded-full border border-[color:var(--line)] bg-white/60 px-3 py-1.5 shadow-sm">
+                  <span className={`h-2 w-2 rounded-full ${signalTone}`} />
+                  <span className="font-[family-name:var(--font-mono)] text-[11px] text-[color:var(--muted)]">
+                    {confidencePct}%
+                  </span>
+                </div>
+              ) : null}
             </div>
-          ) : null}
+          )}
         </div>
       </div>
     </div>

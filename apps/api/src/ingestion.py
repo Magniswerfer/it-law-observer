@@ -8,6 +8,12 @@ import os
 from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
 from .enrichment import should_enrich_proposal, enrich_proposal, create_or_update_label
+from .policy_analysis import (
+    analyze_proposal_policy,
+    policy_analysis_enabled,
+    policy_analysis_model_id,
+    policy_analysis_prompt_version,
+)
 from .oda import fetch_pdf_urls_for_sag
 from .supabase_rest import (
     get_last_watermark,
@@ -16,6 +22,7 @@ from .supabase_rest import (
     upsert_proposal,
     fetch_proposals_page,
     update_proposal,
+    upsert_proposal_policy_analysis,
 )
 
 ODA_BASE_URL = "https://oda.ft.dk/api"
@@ -373,13 +380,26 @@ class IngestionService:
                     if updated:
                         updated_count += 1
 
-                    # Check if we should enrich this proposal
+                    # IT enrichment (existing)
                     if should_enrich_proposal(proposal_data):
                         print(f"Enriching proposal {proposal_data.get('id')}")
                         enrichment_result = enrich_proposal(proposal_data)
                         if enrichment_result:
                             create_or_update_label(proposal_data["id"], enrichment_result)
                             enriched_count += 1
+
+                    # Optional: policy/democracy analysis (stored separately from IT labels).
+                    if policy_analysis_enabled():
+                        analysis = analyze_proposal_policy(proposal_data)
+                        if analysis is not None:
+                            upsert_proposal_policy_analysis(
+                                {
+                                    "proposal_id": proposal_data["id"],
+                                    "analysis": analysis,
+                                    "model": policy_analysis_model_id(),
+                                    "prompt_version": policy_analysis_prompt_version(),
+                                }
+                            )
 
                 except Exception as e:
                     print(f"Error processing proposal {proposal_data.get('id')}: {e}")

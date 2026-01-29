@@ -2,19 +2,21 @@ import os
 from typing import Any, Dict, List, Optional
 
 import httpx
-from dotenv import load_dotenv
+from .config import load_env
 
-load_dotenv()
+load_env()
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SECRET_KEY = (
-    os.getenv("SUPABASE_SECRET_KEY")
-    or os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+    os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+    or os.getenv("SUPABASE_SECRET_KEY")
     or os.getenv("SUPABASE_ANON_KEY")
 )
 
 if not SUPABASE_URL or not SUPABASE_SECRET_KEY:
-    raise ValueError("SUPABASE_URL and SUPABASE_SECRET_KEY (or SUPABASE_SERVICE_ROLE_KEY/SUPABASE_ANON_KEY) are required")
+    raise ValueError(
+        "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SECRET_KEY/SUPABASE_ANON_KEY) are required"
+    )
 
 BASE_URL = f"{SUPABASE_URL}/rest/v1"
 
@@ -38,7 +40,7 @@ def _request(method: str, path: str, params: Optional[Dict[str, Any]] = None, js
 
 
 def fetch_proposals(query: Dict[str, Any]) -> List[Dict[str, Any]]:
-    select_clause = "*,proposal_labels(*)"
+    select_clause = "*,proposal_labels(*),proposal_policy_analyses(*),proposal_pdf_texts(*)"
     params: Dict[str, Any] = {
         "select": select_clause,
         "order": "opdateringsdato.desc",
@@ -55,7 +57,7 @@ def fetch_proposals(query: Dict[str, Any]) -> List[Dict[str, Any]]:
     # If we're searching by exact ID, do not force an inner join on labels.
     # Otherwise, unlabeled proposals would never show up (even if the ID exists).
     if (query.get("it_relevant") is not None or query.get("topic")) and not is_id_lookup:
-        params["select"] = "*,proposal_labels!inner(*)"
+        params["select"] = "*,proposal_labels!inner(*),proposal_policy_analyses(*),proposal_pdf_texts(*)"
 
     if query.get("it_relevant") is not None and not is_id_lookup:
         params["proposal_labels.it_relevant"] = f"eq.{str(query['it_relevant']).lower()}"
@@ -83,7 +85,7 @@ def fetch_proposals(query: Dict[str, Any]) -> List[Dict[str, Any]]:
 
 def fetch_proposal_by_id(proposal_id: int) -> Optional[Dict[str, Any]]:
     params = {
-        "select": "*,proposal_labels(*)",
+        "select": "*,proposal_labels(*),proposal_policy_analyses(*),proposal_pdf_texts(*)",
         "id": f"eq.{proposal_id}",
         "limit": 1,
     }
@@ -153,4 +155,18 @@ def upsert_proposal_label(payload: Dict[str, Any]) -> Dict[str, Any]:
     headers = {"Prefer": "resolution=merge-duplicates,return=representation"}
     params = {"on_conflict": "proposal_id"}
     data = _request("POST", "proposal_labels", params=params, json=payload, headers=headers) or []
+    return data[0] if data else payload
+
+
+def upsert_proposal_policy_analysis(payload: Dict[str, Any]) -> Dict[str, Any]:
+    headers = {"Prefer": "resolution=merge-duplicates,return=representation"}
+    params = {"on_conflict": "proposal_id"}
+    data = _request("POST", "proposal_policy_analyses", params=params, json=payload, headers=headers) or []
+    return data[0] if data else payload
+
+
+def upsert_proposal_pdf_text(payload: Dict[str, Any]) -> Dict[str, Any]:
+    headers = {"Prefer": "resolution=merge-duplicates,return=representation"}
+    params = {"on_conflict": "proposal_id"}
+    data = _request("POST", "proposal_pdf_texts", params=params, json=payload, headers=headers) or []
     return data[0] if data else payload

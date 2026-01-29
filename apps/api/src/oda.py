@@ -54,7 +54,8 @@ def _extract_file_url(file_obj: Dict[str, Any]) -> Optional[str]:
     ODA's file URL field name can differ depending on endpoint/schema shape.
     Prefer common candidates, then fall back to any '*url*' string field.
     """
-    for key in ("url", "filurl", "downloadurl", "link"):
+    # Prefer API-backed download URLs (often not behind the same CDN/WAF rules as public `filurl`).
+    for key in ("downloadurl", "url", "filurl", "link"):
         value = file_obj.get(key)
         if isinstance(value, str) and value.strip():
             return value.strip()

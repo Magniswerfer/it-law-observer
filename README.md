@@ -21,7 +21,7 @@ This is a monorepo containing:
 
 - Incremental ingestion of parliamentary proposals from ODA API
 - IT relevance detection using keyword matching
-- Optional LLM enrichment with OpenAI GPT-4
+- Optional LLM enrichment with Groq (Llama) or OpenAI
 - RESTful API for proposal data
 - Simple web interface for browsing proposals
 
@@ -70,11 +70,17 @@ cp .env.example .env
 ```
 
 Required environment variables:
-- `DATABASE_URL`: Your Supabase database connection string
-- `INGEST_TOKEN`: Secure token for ingestion endpoint protection
+- `SUPABASE_URL`: Your Supabase project URL
+- `SUPABASE_SERVICE_ROLE_KEY` (or `SUPABASE_SECRET_KEY`): Used by the API to call Supabase PostgREST
+- `SUPABASE_ANON_KEY`: Used by the API to validate Supabase user sessions for admin-only endpoints
+- `INGEST_TOKEN`: Secure token for ingestion endpoint protection (used by `POST /ingest`)
 
 Optional:
-- `OPENAI_API_KEY`: For LLM-powered enrichment
+- `GROQ_API_KEY`: For LLM-powered enrichment (Llama via Groq)
+- `OPENAI_API_KEY`: For LLM-powered enrichment (OpenAI)
+- `ENRICH_POLICY_ANALYSIS=true`: Store an additional democracy/digital-rights JSON analysis per proposal (see `apps/api/supabase/migrations/002_add_policy_analyses.sql`)
+- `PDF_UPLOAD_MAX_MB`: Max PDF upload size for `/proposals/{id}/pdf-text` (default 25)
+- `ADMIN_EMAILS`: Comma-separated allowlist of admin user emails (if unset, any authenticated Supabase user is treated as admin)
 
 5. Run the API:
 ```bash
@@ -100,7 +106,7 @@ npm install
 3. Set up environment variables:
 ```bash
 cp .env.example .env.local
-# Edit .env.local with your API URL
+# Edit .env.local with your API + Supabase auth config
 ```
 
 4. Run the development server:
@@ -130,14 +136,22 @@ This will:
 
 - `GET /` - Health check
 - `POST /ingest` - Trigger data ingestion (requires INGEST_TOKEN)
+- `POST /admin/ingest` - Trigger ingestion (requires Supabase Auth as admin)
 - `GET /proposals` - List proposals with filtering
   - Query params: `type=L|B`, `it_relevant=true|false`, `topic=...`, `limit=...`, `offset=...`
 - `GET /proposals/{id}` - Get specific proposal details
+- `POST /proposals/{id}/pdf-text` - Upload a PDF to extract/store text (requires Supabase Auth as admin)
+- `POST /proposals/{id}/policy-analysis` - Re-run policy analysis (requires Supabase Auth as admin)
 
 ### Web Interface
 
 - `/` - Browse proposals with filters
 - `/proposal/[id]` - View proposal details
+- `/admin` - Admin overview (requires login)
+
+Note on PDFs:
+- The app stores extracted PDF text in Postgres (`proposal_pdf_texts`). It does not store raw PDFs in the DB.
+- If you want to retain PDFs, prefer Supabase Storage and store an object path/URL in a dedicated table.
 
 ## Development
 

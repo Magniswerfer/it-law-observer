@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { IBM_Plex_Sans, IBM_Plex_Mono, Newsreader } from "next/font/google";
 import "./globals.css";
+import { isAdminAuthed } from "@/lib/auth/server";
 
 export const metadata: Metadata = {
   title: "IT-politisk radar",
@@ -28,11 +29,12 @@ const monoFont = IBM_Plex_Mono({
   display: "swap",
 });
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const showAdmin = await isAdminAuthed();
   return (
     <html lang="da">
       <body
@@ -74,6 +76,14 @@ export default function RootLayout({
                 >
                   Kontakt
                 </Link>
+                {showAdmin ? (
+                  <Link
+                    href="/admin"
+                    className="rounded-full border border-[color:var(--line)] bg-white/55 px-3 py-2 transition hover:bg-white"
+                  >
+                    Admin
+                  </Link>
+                ) : null}
               </div>
             </div>
           </nav>

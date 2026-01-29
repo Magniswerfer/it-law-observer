@@ -1,21 +1,14 @@
 """
 Enrichment module for IT analysis using LLM.
-Only runs when OPENAI_API_KEY is configured.
+Runs when an LLM provider is configured (GROQ_API_KEY or OPENAI_API_KEY).
 """
 
-import json
 import os
-from typing import Dict, Any, Optional
-import openai
-from datetime import datetime
+from typing import Dict, Any, Optional, Tuple
 from .supabase_rest import upsert_proposal_label
+from .llm import chat_json, llm_enabled, allow_network_pdf_fetch, get_llm_config
 
-# Check if OpenAI API key is available
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-if OPENAI_API_KEY:
-    openai.api_key = OPENAI_API_KEY
-
-ENRICHMENT_PROMPT_VERSION = "1.0"
+ENRICHMENT_PROMPT_VERSION = "1.1"
 
 ENRICHMENT_PROMPT = """
 Du er en ekspert i dansk IT-politik og skal analysere et lovforslag eller beslutningsforslag fra Folketinget.
@@ -24,6 +17,7 @@ Analyser følgende forslag og giv en vurdering af dets IT-relevans:
 
 Titel: {title}
 Resume: {resume}
+PDF-uddrag (kan være afkortet): {pdf_excerpt}
 
 Besvar følgende på dansk:
 1. Er forslaget IT-relevant? (ja/nej)
@@ -40,6 +34,54 @@ Svar i følgende JSON format:
 }}
 """
 
+def _extract_pdf_urls(proposal_data: Dict[str, Any]) -> Tuple[Optional[str], list[str]]:
+    # Prefer PDFs directly attached to the Sag dict during ingestion.
+    main = proposal_data.get("mainPdfUrl")
+    main_pdf_url = main if isinstance(main, str) and main.strip() else None
+    pdf_urls_value = proposal_data.get("pdfUrls")
+    pdf_urls = [u for u in pdf_urls_value if isinstance(u, str) and u.strip()] if isinstance(pdf_urls_value, list) else []
+
+    if main_pdf_url or pdf_urls:
+        return main_pdf_url, pdf_urls
+
+    # Fallback to PDFs stored under `raw_json` when enriching DB rows.
+    raw_json = proposal_data.get("raw_json") or {}
+    if not isinstance(raw_json, dict):
+        raw_json = {}
+    main = raw_json.get("mainPdfUrl")
+    main_pdf_url = main if isinstance(main, str) and main.strip() else None
+    pdf_urls_value = raw_json.get("pdfUrls")
+    pdf_urls = [u for u in pdf_urls_value if isinstance(u, str) and u.strip()] if isinstance(pdf_urls_value, list) else []
+    return main_pdf_url, pdf_urls
+
+
+def _build_pdf_excerpt(proposal_data: Dict[str, Any]) -> str:
+    """
+    Best-effort PDF text extraction for enrichment context.
+    Never raises (returns an empty string on failure).
+    """
+    if not allow_network_pdf_fetch():
+        return ""
+
+    main_pdf_url, pdf_urls = _extract_pdf_urls(proposal_data)
+    url = main_pdf_url or (pdf_urls[0] if pdf_urls else None)
+    if not url:
+        return ""
+
+    try:
+        from .pdf_text import extract_text_from_pdf_url
+
+        max_pages = int(os.getenv("ENRICH_PDF_MAX_PAGES", "25") or "25")
+        max_chars = int(os.getenv("ENRICH_PDF_MAX_CHARS", "40000") or "40000")
+        text = extract_text_from_pdf_url(url, max_pages=max_pages)
+        if len(text) > max_chars:
+            return text[:max_chars] + "\n\n[... afkortet ...]"
+        return text
+    except Exception as e:
+        print(f"PDF text extraction failed: {e}")
+        return ""
+
+
 def enrich_proposal(proposal_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """
     Enrich a proposal with IT analysis using LLM.
@@ -50,7 +92,7 @@ def enrich_proposal(proposal_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     Returns:
         Dict with enrichment results or None if enrichment fails
     """
-    if not OPENAI_API_KEY:
+    if not llm_enabled():
         # Return basic enrichment based on keyword matching
         from .it_relevance import is_it_relevant, extract_it_topics
 
@@ -73,25 +115,22 @@ def enrich_proposal(proposal_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         # Use LLM for enrichment
         title = proposal_data.get('titel', '')
         resume = proposal_data.get('resume', '')
+        pdf_excerpt = _build_pdf_excerpt(proposal_data)
 
         prompt = ENRICHMENT_PROMPT.format(
             title=title,
-            resume=resume or "Ingen resume tilgængelig"
+            resume=resume or "Ingen resume tilgængelig",
+            pdf_excerpt=pdf_excerpt or "Ingen PDF-tekst tilgængelig"
         )
 
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[
+        result = chat_json(
+            [
                 {"role": "system", "content": "Du er en ekspert i dansk IT-politik. Svar kun med valid JSON."},
-                {"role": "user", "content": prompt}
+                {"role": "user", "content": prompt},
             ],
             temperature=0.3,
-            max_tokens=1000
+            max_tokens=1200,
         )
-
-        # Parse JSON response
-        content = response.choices[0].message.content.strip()
-        result = json.loads(content)
 
         # Validate required fields
         if not isinstance(result.get('it_relevant'), bool):
@@ -103,7 +142,11 @@ def enrich_proposal(proposal_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             "it_summary_da": result.get("it_summary_da"),
             "why_it_relevant_da": result.get("why_it_relevant_da"),
             "confidence": 0.9,  # High confidence for LLM results
-            "model": "gpt-4",
+            "model": (
+                f"{cfg.provider}:{cfg.model}"
+                if (cfg := get_llm_config())
+                else "llm"
+            ),
             "prompt_version": ENRICHMENT_PROMPT_VERSION
         }
 

@@ -31,6 +31,24 @@ export interface ProposalLabel {
 
 export interface ProposalWithLabel extends ProposalBase {
   label: ProposalLabel | null;
+  policy?: {
+    proposal_id: number;
+    analysis: Record<string, unknown>;
+    model?: string | null;
+    prompt_version?: string | null;
+    created_at?: string;
+    updated_at?: string;
+  } | null;
+  pdfText?: {
+    proposal_id: number;
+    source_url?: string | null;
+    sha256?: string | null;
+    extracted_text: string;
+    extracted_at?: string | null;
+    error?: string | null;
+    created_at?: string;
+    updated_at?: string;
+  } | null;
   mainPdfUrl?: string | null;
   pdfUrls?: string[];
 }

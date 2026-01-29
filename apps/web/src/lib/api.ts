@@ -57,3 +57,39 @@ export async function triggerIngestion(token: string) {
 
   return response.json();
 }
+
+export async function uploadProposalPdfText(opts: {
+  proposalId: number;
+  file: File;
+  sourceUrl?: string;
+  runPolicyAnalysis?: boolean;
+}) {
+  const form = new FormData();
+  form.append('file', opts.file);
+  if (opts.sourceUrl) form.append('source_url', opts.sourceUrl);
+  form.append('run_policy_analysis', String(opts.runPolicyAnalysis ?? true));
+
+  const response = await fetch(`/api/admin/proposals/${opts.proposalId}/pdf-text`, {
+    method: 'POST',
+    body: form,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to upload PDF: ${await readError(response)}`);
+  }
+
+  return response.json();
+}
+
+export async function runPolicyAnalysis(proposalId: number) {
+  const response = await fetch(`/api/admin/proposals/${proposalId}/policy-analysis`, {
+    method: 'POST',
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to run policy analysis: ${await readError(response)}`);
+  }
+
+  return response.json();
+}

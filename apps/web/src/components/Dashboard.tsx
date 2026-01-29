@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Filters, { DashboardFilters } from '@/components/Filters';
 import ProposalsList, { DashboardState } from '@/components/ProposalsList';
 import { getProposals } from '@/lib/api';
+import { buildTagFrequency, topTags, topTagsWithCounts } from '@/lib/tags';
 import type { ProposalWithLabel, ProposalsQuery } from '@/types';
 
 type SortKey =
@@ -142,20 +143,8 @@ export default function Dashboard() {
     load();
   }, [filters.q, filters.topic, page]);
 
-  const topicSuggestions = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const p of serverProposals) {
-      for (const t of p.label?.it_topics ?? []) {
-        const key = t.trim();
-        if (!key) continue;
-        counts.set(key, (counts.get(key) ?? 0) + 1);
-      }
-    }
-    return [...counts.entries()]
-      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'da-DK'))
-      .slice(0, 24)
-      .map(([t]) => t);
-  }, [serverProposals]);
+  const tagFrequency = useMemo(() => buildTagFrequency(serverProposals), [serverProposals]);
+  const topicSuggestions = useMemo(() => topTags(tagFrequency, 24), [tagFrequency]);
 
   const proposals = useMemo(() => {
     const list = [...serverProposals];
@@ -173,18 +162,10 @@ export default function Dashboard() {
           )
         : 0;
 
-    const topicCounts = new Map<string, number>();
-    for (const p of proposals) {
-      for (const t of p.label?.it_topics ?? []) {
-        topicCounts.set(t, (topicCounts.get(t) ?? 0) + 1);
-      }
-    }
-    const topTopics = [...topicCounts.entries()]
-      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'da-DK'))
-      .slice(0, 6);
+    const topTopics = topTagsWithCounts(tagFrequency, 6);
 
     return { total, labeled, avgConfidence, topTopics };
-  }, [proposals]);
+  }, [proposals, tagFrequency]);
 
   const dashboardState: DashboardState = useMemo(
     () => ({ proposals, loading, error }),
@@ -253,6 +234,7 @@ export default function Dashboard() {
             canNextPage={canNextPage}
             onPrevPage={() => setPage(page - 1)}
             onNextPage={() => setPage(page + 1)}
+            tagFrequency={tagFrequency}
           />
         </div>
       </section>
