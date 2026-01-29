@@ -4,20 +4,14 @@ import { extractAnalysisTags, mergeTags, sortTagsByFrequency } from '@/lib/tags'
 
 type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
 
+type Tone = 'good' | 'warn' | 'bad' | 'neutral';
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function asString(value: unknown): string | null {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
-function asNumber(value: unknown): number | null {
-  return typeof value === 'number' && Number.isFinite(value) ? value : null;
-}
-
-function asBoolean(value: unknown): boolean | null {
-  return typeof value === 'boolean' ? value : null;
 }
 
 function asArray(value: unknown): unknown[] | null {
@@ -30,53 +24,92 @@ function formatIsoToDa(iso: string): string {
   return parsed.toLocaleString('da-DK', { dateStyle: 'medium', timeStyle: 'short' });
 }
 
-function badgeTone(kind: 'good' | 'warn' | 'bad' | 'neutral') {
+function isNotApplicable(value: unknown): boolean {
+  return typeof value === 'string' && value.trim().toLowerCase() === 'not_applicable';
+}
+
+function formatValue(value: unknown, fallback = 'Ikke angivet.'): string {
+  if (isNotApplicable(value)) return 'Ikke relevant.';
+  if (typeof value === 'string' && value.trim()) return value.trim();
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  return fallback;
+}
+
+function labelize(value: string): string {
+  return value.replace(/_/g, ' ').trim();
+}
+
+function formatYesNo(value: string | null): string {
+  switch (value) {
+    case 'yes':
+      return 'ja';
+    case 'no':
+      return 'nej';
+    case 'unclear':
+      return 'uklart';
+    case 'not_applicable':
+      return 'ikke relevant';
+    default:
+      return value ? labelize(value) : 'uklart';
+  }
+}
+
+function formatAlignment(value: string | null): string {
+  switch (value) {
+    case 'aligned':
+      return 'på linje';
+    case 'not_aligned':
+      return 'ikke på linje';
+    case 'unclear':
+      return 'uklart';
+    case 'not_applicable':
+      return 'ikke relevant';
+    default:
+      return value ? labelize(value) : 'uklart';
+  }
+}
+
+function badgeTone(kind: Tone) {
   if (kind === 'good') {
-    return 'border-[color:color-mix(in_oklab,var(--teal)_35%,transparent)] bg-[color:color-mix(in_oklab,var(--teal)_10%,white)] text-[color:var(--ink)]';
+    return 'border-[color:color-mix(in_oklab,var(--teal)_38%,transparent)] bg-[color:color-mix(in_oklab,var(--teal)_12%,white)] text-[color:var(--ink)]';
   }
   if (kind === 'bad') {
-    return 'border-[color:color-mix(in_oklab,var(--rose)_40%,transparent)] bg-[color:color-mix(in_oklab,var(--rose)_10%,white)] text-[color:var(--ink)]';
+    return 'border-[color:color-mix(in_oklab,var(--rose)_45%,transparent)] bg-[color:color-mix(in_oklab,var(--rose)_12%,white)] text-[color:var(--ink)]';
   }
   if (kind === 'warn') {
-    return 'border-[color:color-mix(in_oklab,var(--gold)_45%,transparent)] bg-[color:color-mix(in_oklab,var(--gold)_12%,white)] text-[color:var(--ink)]';
+    return 'border-[color:color-mix(in_oklab,var(--gold)_50%,transparent)] bg-[color:color-mix(in_oklab,var(--gold)_14%,white)] text-[color:var(--ink)]';
   }
-  return 'border-[color:var(--line)] bg-white/55 text-[color:var(--ink-2)]';
+  return 'border-[color:var(--line)] bg-white/60 text-[color:var(--ink-2)]';
 }
 
-function toneForDirection(direction: string | null): 'good' | 'warn' | 'bad' | 'neutral' {
-  switch (direction) {
-    case 'strengthens':
+function toneForAlignment(value: string | null): Tone {
+  switch (value) {
+    case 'aligned':
       return 'good';
-    case 'weakens':
+    case 'not_aligned':
       return 'bad';
-    case 'mixed':
+    case 'unclear':
       return 'warn';
-    case 'neutral':
+    case 'not_applicable':
       return 'neutral';
     default:
       return 'neutral';
   }
 }
 
-function toneForPosition(position: string | null): 'good' | 'warn' | 'bad' | 'neutral' {
-  switch (position) {
-    case 'support':
-      return 'good';
-    case 'support_with_changes':
-      return 'warn';
-    case 'oppose':
+function toneForYesNo(value: string | null): Tone {
+  switch (value) {
+    case 'yes':
       return 'bad';
-    case 'neutral':
+    case 'no':
+      return 'good';
+    case 'unclear':
+      return 'warn';
+    case 'not_applicable':
       return 'neutral';
     default:
       return 'neutral';
   }
-}
-
-function clampPercent(value: number): number {
-  if (value < 0) return 0;
-  if (value > 100) return 100;
-  return value;
 }
 
 function stringifyJson(value: unknown): string {
@@ -87,40 +120,29 @@ function stringifyJson(value: unknown): string {
   }
 }
 
-function Pill({
-  label,
-  tone,
-  subtitle,
-}: {
-  label: string;
-  tone: 'good' | 'warn' | 'bad' | 'neutral';
-  subtitle?: string | null;
-}) {
+function Pill({ label, tone, subtitle }: { label: string; tone: Tone; subtitle?: string | null }) {
   return (
     <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 shadow-sm ${badgeTone(tone)}`}>
-      <span className="font-[family-name:var(--font-mono)] text-[11px] tracking-wide">{label}</span>
-      {subtitle ? (
-        <span className="text-[11px] text-[color:var(--muted)]">{subtitle}</span>
-      ) : null}
+      <span className="font-[family-name:var(--font-mono)] text-[11px] tracking-wide uppercase">{label}</span>
+      {subtitle ? <span className="text-[11px] text-[color:var(--muted)]">{subtitle}</span> : null}
     </div>
   );
 }
 
-function TinyMeter({ label, value }: { label: string; value: number }) {
-  const pct = clampPercent(value);
+function SectionTitle({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
-    <div className="rounded-2xl border border-[color:var(--line)] bg-white/55 p-3">
-      <div className="flex items-center justify-between gap-3">
-        <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">{label}</div>
-        <div className="font-[family-name:var(--font-mono)] text-xs text-[color:var(--ink-2)]">{pct}</div>
-      </div>
-      <div className="mt-2 h-2 overflow-hidden rounded-full border border-[color:var(--line)] bg-white/60">
-        <div
-          className="h-full rounded-full bg-[color:color-mix(in_oklab,var(--teal)_55%,var(--ink))]"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
+    <div className="flex flex-wrap items-baseline justify-between gap-2">
+      <h3 className="font-[family-name:var(--font-serif)] text-xl text-[color:var(--ink)]">{title}</h3>
+      {subtitle ? <span className="text-xs text-[color:var(--muted)]">{subtitle}</span> : null}
     </div>
+  );
+}
+
+function EmptyState({ label, notApplicable }: { label: string; notApplicable?: boolean }) {
+  return (
+    <p className="text-sm text-[color:var(--muted)]">
+      {notApplicable ? 'Ikke relevant for loven.' : label}
+    </p>
   );
 }
 
@@ -134,240 +156,342 @@ export function PolicyAnalysisCard(props: {
 }) {
   const root = isRecord(props.analysis) ? props.analysis : null;
   const meta = root && isRecord(root.meta) ? root.meta : null;
-  const summary = root && isRecord(root.summary) ? root.summary : null;
-  const overall = root && isRecord(root.overall_assessment) ? root.overall_assessment : null;
-  const recommendation = root && isRecord(root.recommendation) ? root.recommendation : null;
+  const shortSummary = root && isRecord(root.short_summary) ? root.short_summary : null;
 
-  const direction = overall ? asString(overall.direction) : null;
-  const score = overall ? asNumber(overall.score) : null;
-  const position = recommendation ? asString(recommendation.position) : null;
+  const concernsRaw = root ? root.democratic_it_concerns : null;
+  const missingRaw = root ? root.missing_positions : null;
+  const changesRaw = root ? root.change_proposals : null;
 
-  const analysisTags = extractAnalysisTags(root);
-  const mergedTags = mergeTags(props.extraTags ?? [], analysisTags);
-  const orderedTags = sortTagsByFrequency(mergedTags, props.tagFrequency);
-  const attention = root ? asArray(root.attention_points) : null;
-  const redFlags = root ? asArray(root.red_flags) : null;
-  const positives = root ? asArray(root.positive_elements) : null;
-  const questions = root ? asArray(root.open_questions) : null;
+  const concerns = asArray(concernsRaw) ?? [];
+  const missing = asArray(missingRaw) ?? [];
+  const changes = asArray(changesRaw) ?? [];
+
+  const concernsNotApplicable = isNotApplicable(concernsRaw);
+  const missingNotApplicable = isNotApplicable(missingRaw);
+  const changesNotApplicable = isNotApplicable(changesRaw);
+
+  const publicControl = root && isRecord(root.public_control_and_responsibility) ? root.public_control_and_responsibility : null;
+  const publicControlNotes = root && isRecord(root.public_control_and_responsibility_notes)
+    ? root.public_control_and_responsibility_notes
+    : null;
+  const privacy = root && isRecord(root.privacy_and_freedom_assessment) ? root.privacy_and_freedom_assessment : null;
+  const privacyNotes = root && isRecord(root.privacy_and_freedom_assessment_notes)
+    ? root.privacy_and_freedom_assessment_notes
+    : null;
+  const alignment = root && isRecord(root.alignment_with_democratic_it_principles)
+    ? root.alignment_with_democratic_it_principles
+    : null;
+  const alignmentNotes = root && isRecord(root.alignment_with_democratic_it_principles_notes)
+    ? root.alignment_with_democratic_it_principles_notes
+    : null;
+  const finalNote = root && isRecord(root.final_note) ? root.final_note : null;
+  const finalNoteJustification = root && isRecord(root.final_note_justification)
+    ? root.final_note_justification
+    : null;
 
   const analysisTimestamp = meta ? asString(meta.analysis_timestamp_iso) : null;
   const jurisdiction = meta ? asString(meta.jurisdiction) : null;
   const lawType = meta ? asString(meta.law_type) : null;
 
-  const oneParagraph = summary ? asString(summary.one_paragraph) : null;
-  const problem = summary ? asString(summary.what_problem_it_addresses) : null;
-  const who = summary && isRecord(summary.who_is_affected) ? summary.who_is_affected : null;
+  const whatTheLawDoes = shortSummary ? asString(shortSummary.what_the_law_does) : null;
+  const whereItUsesIt = shortSummary ? asString(shortSummary.where_it_uses_or_depends_on_it) : null;
 
-  const citizens = who ? asBoolean(who.citizens) : null;
-  const publicSector = who ? asBoolean(who.public_sector) : null;
-  const privateCompanies = who ? asBoolean(who.private_companies) : null;
+  const introducesSurveillance = privacy ? asString(privacy.introduces_surveillance) : null;
 
-  const scoreMeter = score != null ? clampPercent(Math.round(score)) : null;
+  const analysisTags = extractAnalysisTags(root);
+  const mergedTags = mergeTags(props.extraTags ?? [], analysisTags);
+  const orderedTags = sortTagsByFrequency(mergedTags, props.tagFrequency);
 
   return (
-    <section className="rounded-3xl border border-[color:var(--line)] bg-[color:color-mix(in_oklab,var(--paper-2)_40%,white)] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.06)] backdrop-blur sm:p-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <div className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--muted)]">
-            Demokrati • digital suverænitet • borgerrettigheder
-          </div>
-          <h2 className="mt-2 font-[family-name:var(--font-serif)] text-2xl tracking-tight text-[color:var(--ink)] sm:text-3xl">
-            Analyse (policy)
-          </h2>
-          <div className="mt-2 text-sm leading-relaxed text-[color:var(--ink-2)]">
-            Et “dossier”-blik på konsekvenser, magtforskydninger og risici — baseret på titel, resumé og tilgængelig lovtekst.
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <Pill label="Retning" tone={toneForDirection(direction)} subtitle={direction ?? 'uklar'} />
-          <Pill
-            label="Position"
-            tone={toneForPosition(position)}
-            subtitle={
-              position === 'support_with_changes'
-                ? 'støt m. ændringer'
-                : position ?? 'uklar'
-            }
-          />
-          {analysisTimestamp ? (
-            <Pill label="Tid" tone="neutral" subtitle={formatIsoToDa(analysisTimestamp)} />
-          ) : null}
-        </div>
+    <section className="relative overflow-hidden rounded-[32px] border border-[color:var(--line)] bg-[color:color-mix(in_oklab,var(--paper-2)_35%,white)] p-6 shadow-[0_20px_70px_rgba(18,32,50,0.12)] sm:p-8">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -right-32 top-[-180px] h-[380px] w-[380px] rounded-full bg-[radial-gradient(circle_at_top,rgba(42,107,255,0.25),transparent_70%)]" />
+        <div className="absolute -left-24 bottom-[-200px] h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle_at_top,rgba(255,168,76,0.22),transparent_70%)]" />
       </div>
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="rounded-3xl border border-[color:var(--line)] bg-white/55 p-5">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">Kort overblik</div>
-              <div className="mt-2 text-sm leading-relaxed text-[color:var(--ink-2)]">
-                {oneParagraph ?? 'Ingen opsummering angivet.'}
-              </div>
+      <div className="relative">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <div className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--muted)]">
+              Demokratisk kontrol • digital suverænitet • borgerrettigheder
             </div>
-            {scoreMeter != null ? <TinyMeter label="Score" value={scoreMeter} /> : null}
+            <h2 className="mt-2 font-[family-name:var(--font-serif)] text-3xl tracking-tight text-[color:var(--ink)] sm:text-4xl">
+              Demokratisk IT-analyse
+            </h2>
+            <p className="mt-3 text-sm leading-relaxed text-[color:var(--ink-2)]">
+              Struktureret overblik med fokus på frihed, ansvar og konkrete ændringskrav.
+            </p>
           </div>
 
-          <div className="mt-5 grid gap-3 rounded-2xl border border-[color:var(--line)] bg-white/50 p-4">
-            <div className="grid gap-1">
-              <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">
-                Hvilket problem adresseres?
-              </div>
-              <div className="text-sm leading-relaxed text-[color:var(--ink-2)]">
-                {problem ?? 'Ikke angivet.'}
-              </div>
-            </div>
-            <div className="grid gap-2">
-              <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">Hvem påvirkes?</div>
-              <div className="flex flex-wrap gap-2">
-                <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] shadow-sm ${badgeTone(citizens ? 'warn' : 'neutral')}`}>
-                  Borgere: {citizens == null ? 'uklart' : citizens ? 'ja' : 'nej'}
-                </span>
-                <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] shadow-sm ${badgeTone(publicSector ? 'warn' : 'neutral')}`}>
-                  Offentlig sektor: {publicSector == null ? 'uklart' : publicSector ? 'ja' : 'nej'}
-                </span>
-                <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] shadow-sm ${badgeTone(privateCompanies ? 'warn' : 'neutral')}`}>
-                  Private: {privateCompanies == null ? 'uklart' : privateCompanies ? 'ja' : 'nej'}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-[color:var(--muted)]">
-            <span className="font-[family-name:var(--font-mono)]">Model</span> {props.model ?? 'ukendt'}
-            <span aria-hidden className="opacity-40">•</span>
-            <span className="font-[family-name:var(--font-mono)]">Prompt</span> {props.promptVersion ?? 'ukendt'}
-            {jurisdiction ? (
-              <>
-                <span aria-hidden className="opacity-40">•</span>
-                <span className="font-[family-name:var(--font-mono)]">Jurisdiktion</span> {jurisdiction}
-              </>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Pill label="Model" tone="neutral" subtitle={props.model ?? 'ukendt'} />
+            <Pill label="Prompt" tone="neutral" subtitle={props.promptVersion ?? 'ukendt'} />
+            {analysisTimestamp ? (
+              <Pill label="Tid" tone="neutral" subtitle={formatIsoToDa(analysisTimestamp)} />
             ) : null}
-            {lawType ? (
-              <>
-                <span aria-hidden className="opacity-40">•</span>
-                <span className="font-[family-name:var(--font-mono)]">Type</span> {lawType}
-              </>
-            ) : null}
+            {jurisdiction ? <Pill label="Jurisdiktion" tone="neutral" subtitle={jurisdiction} /> : null}
+            {lawType ? <Pill label="Type" tone="neutral" subtitle={labelize(lawType)} /> : null}
           </div>
         </div>
 
-        <div className="rounded-3xl border border-[color:var(--line)] bg-white/55 p-5">
-          <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">Tags</div>
-          {orderedTags.length ? (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {orderedTags.map((tag) => (
-                <span
-                  key={tag}
-                  className="inline-flex items-center rounded-full border border-[color:var(--line)] bg-[color:color-mix(in_oklab,var(--paper-2)_55%,white)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--ink-2)]"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          ) : (
-            <p className="mt-3 text-sm text-[color:var(--muted)]">Ingen tags foreslået endnu.</p>
-          )}
-
-          <div className="mt-6 text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">Anbefaling</div>
-          <div className="mt-2 grid gap-3 rounded-2xl border border-[color:var(--line)] bg-white/50 p-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <Pill
-                label="Position"
-                tone={toneForPosition(position)}
-                subtitle={
-                  position === 'support_with_changes'
-                    ? 'støt med ændringer'
-                    : position ?? 'uklar'
-                }
-              />
-              {scoreMeter != null ? (
-                <div className="font-[family-name:var(--font-mono)] text-xs text-[color:var(--muted)]">
-                  score {scoreMeter}
+        <div className="mt-6 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="rounded-3xl border border-[color:var(--line)] bg-white/60 p-5">
+            <SectionTitle title="Kort resumé" />
+            <div className="mt-4 grid gap-4">
+              <div className="rounded-2xl border border-[color:var(--line)] bg-white/70 p-4">
+                <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">Hvad gør loven?</div>
+                <div className="mt-2 text-sm leading-relaxed text-[color:var(--ink-2)]">
+                  {formatValue(whatTheLawDoes)}
                 </div>
-              ) : null}
-            </div>
-            <div className="text-sm leading-relaxed text-[color:var(--ink-2)]">
-              {recommendation ? asString(recommendation.rationale) ?? 'Ingen begrundelse angivet.' : 'Ingen anbefaling angivet.'}
-            </div>
-            {recommendation && Array.isArray(recommendation.key_changes_if_any) && recommendation.key_changes_if_any.length ? (
-              <div className="grid gap-2">
-                <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">
-                  Nøgleændringer
-                </div>
-                <ul className="space-y-1 text-sm leading-relaxed text-[color:var(--ink-2)]">
-                  {(recommendation.key_changes_if_any as unknown[]).map((k, idx) => (
-                    <li key={idx} className="flex gap-2">
-                      <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-black/25" aria-hidden />
-                      <span>{asString(k) ?? String(k)}</span>
-                    </li>
-                  ))}
-                </ul>
               </div>
-            ) : null}
-          </div>
-        </div>
-      </div>
+              <div className="rounded-2xl border border-[color:var(--line)] bg-white/70 p-4">
+                <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">IT-afhængighed</div>
+                <div className="mt-2 text-sm leading-relaxed text-[color:var(--ink-2)]">
+                  {formatValue(whereItUsesIt)}
+                </div>
+              </div>
+            </div>
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-3">
-        <DossierList
-          title="Attention points"
-          items={attention}
-          empty="Ingen opmærksomhedspunkter angivet."
-          render={(item, idx) => {
-            if (!isRecord(item)) return null;
-            const topic = asString(item.topic) ?? `punkt-${idx + 1}`;
-            const issue = asString(item.issue) ?? 'Ikke angivet.';
-            const why = asString(item.why_it_matters) ?? 'Ikke angivet.';
-            const risk = asString(item.risk_level) ?? 'unknown';
-            const tone = risk === 'high' ? 'bad' : risk === 'medium' ? 'warn' : 'neutral';
-            return (
-              <div className="rounded-2xl border border-[color:var(--line)] bg-white/55 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <Pill label={topic} tone="neutral" />
-                  <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] shadow-sm ${badgeTone(tone)}`}>
-                    risk: <span className="ml-1 font-[family-name:var(--font-mono)]">{risk}</span>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {orderedTags.length ? (
+                orderedTags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center rounded-full border border-[color:var(--line)] bg-[color:color-mix(in_oklab,var(--paper-2)_55%,white)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--ink-2)]"
+                  >
+                    {labelize(tag)}
                   </span>
-                </div>
-                <div className="mt-3 text-sm font-medium text-[color:var(--ink)]">{issue}</div>
-                <div className="mt-2 text-sm leading-relaxed text-[color:var(--ink-2)]">{why}</div>
-              </div>
-            );
-          }}
-        />
-
-        <DossierList title="Red flags" items={redFlags} empty="Ingen red flags angivet." />
-        <DossierList title="Åbne spørgsmål" items={questions} empty="Ingen åbne spørgsmål angivet." />
-      </div>
-
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <DossierList title="Positive elementer" items={positives} empty="Ingen positive elementer angivet." />
-
-        <div className="rounded-3xl border border-[color:var(--line)] bg-white/55 p-5">
-          <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">Detaljer</div>
-          <div className="mt-3 grid gap-3 rounded-2xl border border-[color:var(--line)] bg-white/50 p-4">
-            <KV label="Titel" value={asString(meta?.title) ?? props.title} />
-            <KV label="Hvem vinder mest?" value={overall ? asString(overall.who_benefits_most) ?? 'Ikke angivet.' : 'Ikke angivet.'} />
-            <KV label="Hvem taber mest?" value={overall ? asString(overall.who_loses_most) ?? 'Ikke angivet.' : 'Ikke angivet.'} />
-            <KV label="Score forklaring" value={overall ? asString(overall.score_explanation) ?? 'Ikke angivet.' : 'Ikke angivet.'} />
+                ))
+              ) : (
+                <span className="text-xs text-[color:var(--muted)]">Ingen emnetags.</span>
+              )}
+            </div>
           </div>
 
-          <details className="mt-4 rounded-2xl border border-[color:var(--line)] bg-white/45 p-4">
-            <summary className="cursor-pointer select-none text-sm font-medium text-[color:var(--ink)]">
-              Vis rå JSON
-            </summary>
-            <pre className="mt-3 max-h-[420px] overflow-auto rounded-xl border border-[color:var(--line)] bg-[color:color-mix(in_oklab,var(--paper)_78%,white)] p-3 font-[family-name:var(--font-mono)] text-[11px] leading-relaxed text-[color:var(--ink-2)]">
-{stringifyJson(props.analysis)}
-            </pre>
-          </details>
+          <div className="rounded-3xl border border-[color:var(--line)] bg-white/60 p-5">
+            <SectionTitle title="Privatliv & frihed" />
+            <div className="mt-4 grid gap-3 rounded-2xl border border-[color:var(--line)] bg-white/70 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="text-sm font-medium text-[color:var(--ink)]">Introducerer overvågning?</div>
+                <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] shadow-sm ${badgeTone(toneForYesNo(introducesSurveillance))}`}>
+                  {formatYesNo(introducesSurveillance)}
+                </span>
+              </div>
+              {privacyNotes ? (
+                <p className="text-xs leading-relaxed text-[color:var(--muted)]">
+                  {formatValue(privacyNotes.introduces_surveillance)}
+                </p>
+              ) : null}
+              <div>
+                <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">Mulige privatlivsproblemer</div>
+                <p className="mt-2 text-sm leading-relaxed text-[color:var(--ink-2)]">
+                  {formatValue(privacy ? privacy.potential_privacy_issues : null)}
+                </p>
+                {privacyNotes ? (
+                  <p className="mt-2 text-xs leading-relaxed text-[color:var(--muted)]">
+                    {formatValue(privacyNotes.potential_privacy_issues)}
+                  </p>
+                ) : null}
+              </div>
+              <div>
+                <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">Grupper i risiko</div>
+                <p className="mt-2 text-sm leading-relaxed text-[color:var(--ink-2)]">
+                  {formatValue(privacy ? privacy.groups_most_at_risk : null)}
+                </p>
+                {privacyNotes ? (
+                  <p className="mt-2 text-xs leading-relaxed text-[color:var(--muted)]">
+                    {formatValue(privacyNotes.groups_most_at_risk)}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
 
-      {!root ? (
-        <p className="mt-4 text-sm text-[color:var(--muted)]">
-          Analysen kunne ikke fortolkes som JSON-objekt. Se “rå JSON” ovenfor.
-        </p>
-      ) : null}
+        <div className="mt-6 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="grid gap-4">
+            <div className="rounded-3xl border border-[color:var(--line)] bg-white/60 p-5">
+              <SectionTitle title="Demokratiske IT-bekymringer" subtitle={concernsNotApplicable ? 'ikke relevant' : undefined} />
+              {concerns.length ? (
+                <div className="mt-4 grid gap-3">
+                  {concerns.map((item, idx) => {
+                    if (!isRecord(item)) {
+                      return (
+                        <div key={idx} className="rounded-2xl border border-[color:var(--line)] bg-white/70 p-4 text-sm text-[color:var(--ink-2)]">
+                          {formatValue(item, 'Ikke angivet.')}
+                        </div>
+                      );
+                    }
+                    const topic = asString(item.topic) ?? `punkt-${idx + 1}`;
+                    return (
+                      <div key={idx} className="rounded-2xl border border-[color:var(--line)] bg-white/70 p-4">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] shadow-sm ${badgeTone('neutral')}`}>
+                            {labelize(topic)}
+                          </span>
+                          <span className="text-xs text-[color:var(--muted)]">Berørte: {formatValue(item.who_is_affected, 'ukendt')}</span>
+                        </div>
+                        <div className="mt-3 text-sm font-medium text-[color:var(--ink)]">
+                          {formatValue(item.concern)}
+                        </div>
+                        <div className="mt-2 text-sm leading-relaxed text-[color:var(--ink-2)]">
+                          {formatValue(item.why_it_matters_democratically)}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="mt-4">
+                  <EmptyState label="Ingen bekymringer angivet." notApplicable={concernsNotApplicable} />
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-3xl border border-[color:var(--line)] bg-white/60 p-5">
+              <SectionTitle title="Manglende stillingtagen" subtitle={missingNotApplicable ? 'ikke relevant' : undefined} />
+              {missing.length ? (
+                <div className="mt-4 grid gap-3">
+                  {missing.map((item, idx) => {
+                    if (!isRecord(item)) {
+                      return (
+                        <div key={idx} className="rounded-2xl border border-[color:var(--line)] bg-white/70 p-4 text-sm text-[color:var(--ink-2)]">
+                          {formatValue(item, 'Ikke angivet.')}
+                        </div>
+                      );
+                    }
+                    return (
+                      <div key={idx} className="rounded-2xl border border-[color:var(--line)] bg-white/70 p-4">
+                        <div className="text-sm font-medium text-[color:var(--ink)]">{formatValue(item.question)}</div>
+                        <div className="mt-2 text-sm leading-relaxed text-[color:var(--ink-2)]">
+                          {formatValue(item.why_this_should_be_explicit)}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="mt-4">
+                  <EmptyState label="Ingen mangler angivet." notApplicable={missingNotApplicable} />
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-3xl border border-[color:var(--line)] bg-white/60 p-5">
+              <SectionTitle title="Konkrete ændringsforslag" subtitle={changesNotApplicable ? 'ikke relevant' : undefined} />
+              {changes.length ? (
+                <div className="mt-4 grid gap-3">
+                  {changes.map((item, idx) => {
+                    if (!isRecord(item)) {
+                      return (
+                        <div key={idx} className="rounded-2xl border border-[color:var(--line)] bg-white/70 p-4 text-sm text-[color:var(--ink-2)]">
+                          {formatValue(item, 'Ikke angivet.')}
+                        </div>
+                      );
+                    }
+                    return (
+                      <div key={idx} className="rounded-2xl border border-[color:var(--line)] bg-white/70 p-4">
+                        <div className="text-sm font-medium text-[color:var(--ink)]">{formatValue(item.proposal)}</div>
+                        <div className="mt-2 text-sm leading-relaxed text-[color:var(--ink-2)]">
+                          <span className="font-medium text-[color:var(--ink)]">Krav: </span>
+                          {formatValue(item.what_it_requires)}
+                        </div>
+                        <div className="mt-2 text-sm leading-relaxed text-[color:var(--ink-2)]">
+                          <span className="font-medium text-[color:var(--ink)]">Demokratisk effekt: </span>
+                          {formatValue(item.democratic_effect)}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="mt-4">
+                  <EmptyState label="Ingen forslag angivet." notApplicable={changesNotApplicable} />
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="grid gap-4">
+            <div className="rounded-3xl border border-[color:var(--line)] bg-white/60 p-5">
+              <SectionTitle title="Offentlig kontrol & ansvar" />
+              <div className="mt-4 grid gap-3 rounded-2xl border border-[color:var(--line)] bg-white/70 p-4">
+                <KV label="Ejer systemet" value={formatValue(publicControl ? publicControl.who_owns_the_system : null)} />
+                {publicControlNotes ? (
+                  <NoteRow value={formatValue(publicControlNotes.who_owns_the_system)} />
+                ) : null}
+                <KV label="Driver systemet" value={formatValue(publicControl ? publicControl.who_operates_it : null)} />
+                {publicControlNotes ? (
+                  <NoteRow value={formatValue(publicControlNotes.who_operates_it)} />
+                ) : null}
+                <KV label="Vedligeholdelse" value={formatValue(publicControl ? publicControl.who_maintains_it_long_term : null)} />
+                {publicControlNotes ? (
+                  <NoteRow value={formatValue(publicControlNotes.who_maintains_it_long_term)} />
+                ) : null}
+                <KV label="Ansvarsgab" value={formatValue(publicControl ? publicControl.accountability_gaps : null)} />
+                {publicControlNotes ? (
+                  <NoteRow value={formatValue(publicControlNotes.accountability_gaps)} />
+                ) : null}
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-[color:var(--line)] bg-white/60 p-5">
+              <SectionTitle title="Demokratiske IT-principper" />
+              <div className="mt-4 grid gap-2">
+                <PrincipleRow
+                  label="Open source som standard"
+                  value={alignment ? asString(alignment.open_source_by_default) : null}
+                  note={alignmentNotes ? asString(alignmentNotes.open_source_by_default) : null}
+                />
+                <PrincipleRow
+                  label="Ingen tvungen digital-only adgang"
+                  value={alignment ? asString(alignment.no_forced_digital_only_access) : null}
+                  note={alignmentNotes ? asString(alignmentNotes.no_forced_digital_only_access) : null}
+                />
+                <PrincipleRow
+                  label="Offentligt ejerskab af kritiske systemer"
+                  value={alignment ? asString(alignment.public_ownership_of_critical_systems) : null}
+                  note={alignmentNotes ? asString(alignmentNotes.public_ownership_of_critical_systems) : null}
+                />
+                <PrincipleRow
+                  label="Forsigtighed med ny teknologi"
+                  value={alignment ? asString(alignment.precaution_with_new_technology) : null}
+                  note={alignmentNotes ? asString(alignmentNotes.precaution_with_new_technology) : null}
+                />
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-[color:var(--line)] bg-white/60 p-5">
+              <SectionTitle title="Vigtigste note" />
+              <div className="mt-4 grid gap-3 rounded-2xl border border-[color:var(--line)] bg-white/70 p-4">
+                <KV label="Største demokratiske risiko" value={formatValue(finalNote ? finalNote.biggest_democratic_risk : null)} />
+                {finalNoteJustification ? (
+                  <NoteRow value={formatValue(finalNoteJustification.biggest_democratic_risk)} />
+                ) : null}
+                <KV label="Vigtigste ændring" value={formatValue(finalNote ? finalNote.most_important_change : null)} />
+                {finalNoteJustification ? (
+                  <NoteRow value={formatValue(finalNoteJustification.most_important_change)} />
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <details className="mt-6 rounded-2xl border border-[color:var(--line)] bg-white/55 p-4">
+          <summary className="cursor-pointer select-none text-sm font-medium text-[color:var(--ink)]">
+            Vis rå JSON
+          </summary>
+          <pre className="mt-3 max-h-[420px] overflow-auto rounded-xl border border-[color:var(--line)] bg-[color:color-mix(in_oklab,var(--paper)_78%,white)] p-3 font-[family-name:var(--font-mono)] text-[11px] leading-relaxed text-[color:var(--ink-2)]">
+{stringifyJson(props.analysis)}
+          </pre>
+        </details>
+
+        {!root ? (
+          <p className="mt-4 text-sm text-[color:var(--muted)]">
+            Analysen kunne ikke fortolkes som JSON-objekt. Se “rå JSON” ovenfor.
+          </p>
+        ) : null}
+      </div>
     </section>
   );
 }
@@ -381,31 +505,23 @@ function KV({ label, value }: { label: string; value: string }) {
   );
 }
 
-function DossierList(props: {
-  title: string;
-  items: unknown[] | null;
-  empty: string;
-  render?: (item: unknown, idx: number) => React.ReactNode;
-}) {
-  const list = props.items ?? [];
+function NoteRow({ value }: { value: string }) {
+  return <p className="text-xs leading-relaxed text-[color:var(--muted)]">{value}</p>;
+}
+
+function PrincipleRow({ label, value, note }: { label: string; value: string | null; note?: string | null }) {
+  const tone = toneForAlignment(value);
   return (
-    <div className="rounded-3xl border border-[color:var(--line)] bg-white/55 p-5">
-      <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">{props.title}</div>
-      {list.length ? (
-        <div className="mt-3 grid gap-3">
-          {list.map((item, idx) => {
-            if (props.render) return <React.Fragment key={idx}>{props.render(item, idx)}</React.Fragment>;
-            const text = typeof item === 'string' && item.trim() ? item.trim() : String(item);
-            return (
-              <div key={idx} className="rounded-2xl border border-[color:var(--line)] bg-white/50 px-4 py-3 text-sm leading-relaxed text-[color:var(--ink-2)]">
-                {text}
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <p className="mt-3 text-sm text-[color:var(--muted)]">{props.empty}</p>
-      )}
+    <div className="rounded-2xl border border-[color:var(--line)] bg-white/70 px-4 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-sm text-[color:var(--ink-2)]">{label}</span>
+        <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] shadow-sm ${badgeTone(tone)}`}>
+          {formatAlignment(value)}
+        </span>
+      </div>
+      {note ? (
+        <p className="mt-2 text-xs leading-relaxed text-[color:var(--muted)]">{note}</p>
+      ) : null}
     </div>
   );
 }

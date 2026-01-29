@@ -8,21 +8,39 @@ const normalizeTag = (value: string) => value.trim().toLowerCase();
 export function extractAnalysisTags(analysis: unknown): string[] {
   if (!analysis || typeof analysis !== 'object') return [];
 
-  const tags = (analysis as Record<string, unknown>).tags;
-  if (!Array.isArray(tags)) return [];
-
   const out: string[] = [];
-  for (const item of tags) {
-    if (typeof item === 'string') {
-      out.push(item);
-      continue;
-    }
-    if (item && typeof item === 'object' && 'tag' in item) {
-      const tag = (item as Record<string, unknown>).tag;
-      if (typeof tag === 'string') out.push(tag);
+  const rawTags = (analysis as Record<string, unknown>).tags;
+  if (Array.isArray(rawTags)) {
+    for (const item of rawTags) {
+      if (typeof item === 'string') {
+        out.push(item);
+        continue;
+      }
+      if (item && typeof item === 'object' && 'tag' in item) {
+        const tag = (item as Record<string, unknown>).tag;
+        if (typeof tag === 'string') out.push(tag);
+      }
     }
   }
-  return out.map((tag) => tag.trim()).filter(Boolean);
+
+  if (!out.length) {
+    const rawConcerns = (analysis as Record<string, unknown>).democratic_it_concerns;
+    if (Array.isArray(rawConcerns)) {
+      for (const item of rawConcerns) {
+        if (typeof item === 'string') {
+          out.push(item);
+          continue;
+        }
+        if (item && typeof item === 'object' && 'topic' in item) {
+          const topic = (item as Record<string, unknown>).topic;
+          if (typeof topic === 'string') out.push(topic);
+        }
+      }
+    }
+  }
+  return out
+    .map((tag) => tag.trim())
+    .filter((tag) => tag && tag.toLowerCase() !== 'not_applicable');
 }
 
 export function extractPolicyTags(policy: ProposalWithLabel['policy']): string[] {

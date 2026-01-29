@@ -114,12 +114,28 @@ def chat_json(
     client = OpenAI(api_key=config.api_key, base_url=config.base_url)
 
     # Groq currently supports the OpenAI Chat Completions API shape.
-    response = client.chat.completions.create(
-        model=config.model,
-        messages=messages,
-        temperature=temperature,
-        max_tokens=max_tokens,
-    )
+    use_json_mode = (os.getenv("LLM_JSON_MODE") or "on").strip().lower() not in {"0", "false", "no", "off"}
+
+    def _create_completion(response_format: Optional[Dict[str, str]]):
+        kwargs: Dict[str, Any] = {
+            "model": config.model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "top_p": float(os.getenv("LLM_TOP_P", "1") or "1"),
+        }
+        if response_format:
+            kwargs["response_format"] = response_format
+        return client.chat.completions.create(**kwargs)
+
+    try:
+        response = _create_completion({"type": "json_object"} if use_json_mode else None)
+    except Exception as e:
+        message = str(e)
+        if use_json_mode and ("json_validate_failed" in message or "Failed to validate JSON" in message):
+            response = _create_completion(None)
+        else:
+            raise
 
     content = (response.choices[0].message.content or "").strip()
     return _extract_first_json_object(content)
@@ -132,4 +148,3 @@ def llm_enabled() -> bool:
 def allow_network_pdf_fetch() -> bool:
     # Lets you disable PDF downloads in environments where outbound fetch is undesired.
     return _env_bool("ENRICH_FETCH_PDFS", True)
-

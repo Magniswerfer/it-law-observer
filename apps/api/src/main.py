@@ -132,18 +132,28 @@ def get_proposals(
             policy = result.policy
             if not policy or not isinstance(policy.analysis, dict):
                 return []
-            raw_tags = policy.analysis.get("tags")
-            if not isinstance(raw_tags, list):
-                return []
             tags: List[str] = []
-            for item in raw_tags:
-                if isinstance(item, str):
-                    tags.append(item)
-                elif isinstance(item, dict):
-                    tag = item.get("tag")
-                    if isinstance(tag, str):
-                        tags.append(tag)
-            return [t.strip() for t in tags if isinstance(t, str) and t.strip()]
+            raw_tags = policy.analysis.get("tags")
+            if isinstance(raw_tags, list):
+                for item in raw_tags:
+                    if isinstance(item, str):
+                        tags.append(item)
+                    elif isinstance(item, dict):
+                        tag = item.get("tag")
+                        if isinstance(tag, str):
+                            tags.append(tag)
+
+            if not tags:
+                raw_concerns = policy.analysis.get("democratic_it_concerns")
+                if isinstance(raw_concerns, list):
+                    for item in raw_concerns:
+                        if isinstance(item, str):
+                            tags.append(item)
+                        elif isinstance(item, dict):
+                            topic = item.get("topic")
+                            if isinstance(topic, str):
+                                tags.append(topic)
+            return [t.strip() for t in tags if isinstance(t, str) and t.strip() and t.strip().lower() != "not_applicable"]
 
         def merged_tags(result: ProposalWithLabel) -> List[str]:
             tags: List[str] = []

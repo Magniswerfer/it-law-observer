@@ -7,27 +7,32 @@ from typing import Any, Dict, Optional
 from .llm import chat_json, get_llm_config
 from .enrichment import _build_pdf_excerpt  # keep PDF extraction behavior consistent
 
-POLICY_ANALYSIS_PROMPT_VERSION = "1.1"
+POLICY_ANALYSIS_PROMPT_VERSION = "2.0"
 
 
 POLICY_ANALYSIS_PROMPT = """
-Du er en analytiker med fokus på demokrati, digital suverænitet, borgerrettigheder og offentlig IT.
+Du er en analytiker med fokus på demokratisk kontrol, digital suverænitet, borgerrettigheder og offentlig IT.
 
-Analyser den følgende lov / lovforslag ud fra et menneske-, samfunds- og demokratiperspektiv.
-Fokusér på konsekvenser, magtforskydninger og risici – ikke kun intentioner.
+Analyser den følgende lov / lovforslag med særligt fokus på IT-delen.
+Formålet er ikke at vurdere om loven er “god eller dårlig” generelt, men at identificere:
+
+- Hvor loven påvirker digital frihed, privatliv og demokrati
+- Hvor der mangler eksplicit stillingtagen til IT-spørgsmål
+- Hvilke KONKRETE ændringsforslag der bør stilles for at gøre lovens IT-del mere demokratisk, gennemsigtig og fri
 
 VIGTIGT:
-- Dit svar skal være VALID JSON og KUN JSON.
-- Ingen markdown, ingen forklaringstekst.
-- Skriv på dansk.
-- Hvis information mangler, skriv det eksplicit.
+- Returnér KUN VALID JSON
+- Ingen markdown eller forklarende tekst
+- Skriv på dansk
+- Hvis et punkt ikke er relevant for loven, marker det eksplicit som "not_applicable"
+- Vær normativ og konkret: foreslå krav, ikke hensigtserklæringer
 
 INPUT:
 Titel: {title}
 Resumé: {resume}
 Lovtekst (PDF-uddrag, kan være afkortet): {law_text}
 
-OUTPUTFORMAT (skal følges præcist):
+OUTPUTFORMAT (skal følges):
 
 {{
   "meta": {{
@@ -37,60 +42,58 @@ OUTPUTFORMAT (skal følges præcist):
     "analysis_timestamp_iso": ""
   }},
 
-  "summary": {{
-    "one_paragraph": "",
-    "what_problem_it_addresses": "",
-    "who_is_affected": {{
-      "citizens": true,
-      "public_sector": true,
-      "private_companies": true
-    }}
+  "short_summary": {{
+    "what_the_law_does": "",
+    "where_it_uses_or_depends_on_it": ""
   }},
 
-  "tags": [
+  "democratic_it_concerns": [
     {{
-      "tag": "",
-      "category": "privatliv|demokrati|digital_suveraenitet|offentlig_it|sikkerhed|okonomi|adgang|AI|andet",
-      "confidence": 0.0,
-      "evidence": ""
+      "topic": "open_source|privacy|surveillance|security|ownership|infrastructure|ai|access|procurement|other",
+      "concern": "",
+      "why_it_matters_democratically": "",
+      "who_is_affected": ""
     }}
   ],
 
-  "attention_points": [
+  "missing_positions": [
     {{
-      "topic": "privatliv|demokrati|ejerskab|økonomi|sikkerhed|klima|adgang|AI|andet",
-      "issue": "",
-      "why_it_matters": "",
-      "risk_level": "low|medium|high"
+      "question": "",
+      "why_this_should_be_explicit": ""
     }}
   ],
 
-  "red_flags": [
-    ""
+  "change_proposals": [
+    {{
+      "proposal": "",
+      "what_it_requires": "",
+      "democratic_effect": ""
+    }}
   ],
 
-  "positive_elements": [
-    ""
-  ],
-
-  "open_questions": [
-    ""
-  ],
-
-  "overall_assessment": {{
-    "direction": "strengthens|weakens|mixed|neutral|unclear",
-    "score": 0,
-    "score_explanation": "",
-    "who_benefits_most": "",
-    "who_loses_most": ""
+  "public_control_and_responsibility": {{
+    "who_owns_the_system": "",
+    "who_operates_it": "",
+    "who_maintains_it_long_term": "",
+    "accountability_gaps": ""
   }},
 
-  "recommendation": {{
-    "position": "support|support_with_changes|neutral|oppose|unclear",
-    "rationale": "",
-    "key_changes_if_any": [
-      ""
-    ]
+  "privacy_and_freedom_assessment": {{
+    "introduces_surveillance": "yes|no|unclear|not_applicable",
+    "potential_privacy_issues": "",
+    "groups_most_at_risk": ""
+  }},
+
+  "alignment_with_democratic_it_principles": {{
+    "open_source_by_default": "aligned|not_aligned|unclear|not_applicable",
+    "no_forced_digital_only_access": "aligned|not_aligned|unclear|not_applicable",
+    "public_ownership_of_critical_systems": "aligned|not_aligned|unclear|not_applicable",
+    "precaution_with_new_technology": "aligned|not_aligned|unclear|not_applicable"
+  }},
+
+  "final_note": {{
+    "biggest_democratic_risk": "",
+    "most_important_change": ""
   }}
 }}
 """
@@ -167,7 +170,6 @@ def analyze_proposal_policy(proposal_data: Dict[str, Any]) -> Optional[Dict[str,
         print(f"Policy analysis failed: {e}")
         return None
 
-    # Lightweight normalization/fill-ins to keep downstream parsing stable.
     meta = result.get("meta")
     if not isinstance(meta, dict):
         meta = {}
@@ -176,8 +178,5 @@ def analyze_proposal_policy(proposal_data: Dict[str, Any]) -> Optional[Dict[str,
         meta["title"] = title
     if not isinstance(meta.get("analysis_timestamp_iso"), str) or not meta.get("analysis_timestamp_iso"):
         meta["analysis_timestamp_iso"] = datetime.now(timezone.utc).isoformat()
-
-    if not isinstance(result.get("tags"), list):
-        result["tags"] = []
 
     return result
