@@ -1,0 +1,17 @@
+{
+  "name": "@it-radar/shared",
+  "version": "1.0.0",
+  "description": "Shared types and utilities for IT-politics bill radar",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "keywords": ["typescript", "types", "it-politics"],
+  "author": "Enhedslisten IT-Politiske Udvalg",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
