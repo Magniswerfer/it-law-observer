@@ -96,10 +96,10 @@ export default async function ProposalPage({ params }: PageProps) {
 
           <div className="mt-8 space-y-6">
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
-              <section className="rounded-3xl border border-[color:var(--line)] bg-white/55 p-6 shadow-[0_18px_60px_rgba(0,0,0,0.06)] backdrop-blur">
+              <section className="flex max-h-[420px] flex-col rounded-3xl border border-[color:var(--line)] bg-white/55 p-6 shadow-[0_18px_60px_rgba(0,0,0,0.06)] backdrop-blur">
                 <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">Officielt resume</div>
                 {proposal.resume ? (
-                  <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-[color:var(--ink-2)]">
+                  <p className="mt-3 min-h-0 flex-1 whitespace-pre-line overflow-y-auto text-sm leading-relaxed text-[color:var(--ink-2)]">
                     {proposal.resume}
                   </p>
                 ) : (
@@ -107,7 +107,7 @@ export default async function ProposalPage({ params }: PageProps) {
                 )}
               </section>
 
-              <div className="rounded-2xl border border-[color:var(--line)] bg-white/60 p-5 shadow-sm">
+              <div className="flex max-h-[420px] flex-col rounded-2xl border border-[color:var(--line)] bg-white/60 p-5 shadow-sm">
                 <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">Opdateret</div>
                 <div className="mt-1 font-[family-name:var(--font-mono)] text-xs text-[color:var(--ink-2)]">
                   {formatDate(proposal.opdateringsdato)}
@@ -137,7 +137,7 @@ export default async function ProposalPage({ params }: PageProps) {
 
                 <div className="mt-4 text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">Emner</div>
                 {orderedTags.length ? (
-                  <div className="mt-2 space-y-2">
+                  <div className="mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
                     {orderedTags.map((topic) => (
                       <span
                         key={topic}

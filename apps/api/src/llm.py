@@ -11,7 +11,7 @@ from openai import OpenAI
 
 @dataclass(frozen=True)
 class LlmConfig:
-    provider: str  # "openai" | "groq"
+    provider: str  # "openai"
     api_key: str
     base_url: Optional[str]
     model: str
@@ -29,41 +29,17 @@ def get_llm_config() -> Optional[LlmConfig]:
     Returns:
         LlmConfig if a provider is configured, else None.
     """
-    provider = (os.getenv("LLM_PROVIDER") or "auto").strip().lower()
-    groq_key = (os.getenv("GROQ_API_KEY") or "").strip()
     openai_key = (os.getenv("OPENAI_API_KEY") or "").strip()
+    if not openai_key:
+        return None
 
-    if provider in {"auto", ""}:
-        if groq_key:
-            provider = "groq"
-        elif openai_key:
-            provider = "openai"
-        else:
-            return None
-
-    if provider == "groq":
-        if not groq_key:
-            return None
-        model = (os.getenv("GROQ_MODEL") or os.getenv("LLM_MODEL") or "llama-3.1-70b-versatile").strip()
-        return LlmConfig(
-            provider="groq",
-            api_key=groq_key,
-            base_url=(os.getenv("GROQ_BASE_URL") or "https://api.groq.com/openai/v1").strip(),
-            model=model,
-        )
-
-    if provider == "openai":
-        if not openai_key:
-            return None
-        model = (os.getenv("OPENAI_MODEL") or os.getenv("LLM_MODEL") or "gpt-4o-mini").strip()
-        return LlmConfig(
-            provider="openai",
-            api_key=openai_key,
-            base_url=(os.getenv("OPENAI_BASE_URL") or "").strip() or None,
-            model=model,
-        )
-
-    return None
+    model = (os.getenv("OPENAI_MODEL") or os.getenv("LLM_MODEL") or "gpt-4o-mini").strip()
+    return LlmConfig(
+        provider="openai",
+        api_key=openai_key,
+        base_url=(os.getenv("OPENAI_BASE_URL") or "").strip() or None,
+        model=model,
+    )
 
 
 def _extract_first_json_object(text: str) -> Dict[str, Any]:
@@ -104,16 +80,15 @@ def chat_json(
     Sends a chat completion request and returns a parsed JSON object.
 
     Notes:
-      - Uses the OpenAI Python SDK against either OpenAI or Groq's OpenAI-compatible API.
+      - Uses the OpenAI Python SDK against OpenAI.
       - Returns only a JSON object; raises if none can be parsed.
     """
     config = get_llm_config()
     if not config:
-        raise RuntimeError("No LLM provider configured (set GROQ_API_KEY or OPENAI_API_KEY)")
+        raise RuntimeError("No OpenAI API key configured (set OPENAI_API_KEY)")
 
     client = OpenAI(api_key=config.api_key, base_url=config.base_url)
 
-    # Groq currently supports the OpenAI Chat Completions API shape.
     use_json_mode = (os.getenv("LLM_JSON_MODE") or "on").strip().lower() not in {"0", "false", "no", "off"}
 
     def _create_completion(response_format: Optional[Dict[str, str]]):
@@ -121,7 +96,6 @@ def chat_json(
             "model": config.model,
             "messages": messages,
             "temperature": temperature,
-            "max_tokens": max_tokens,
             "top_p": float(os.getenv("LLM_TOP_P", "1") or "1"),
         }
         if response_format:
@@ -139,6 +113,55 @@ def chat_json(
 
     content = (response.choices[0].message.content or "").strip()
     return _extract_first_json_object(content)
+
+
+def chat_json_schema(
+    messages: List[Dict[str, str]],
+    *,
+    schema: Dict[str, Any],
+    schema_name: str,
+    schema_description: Optional[str] = None,
+    temperature: float = 0.2,
+    max_tokens: int = 1200,
+) -> Dict[str, Any]:
+    """
+    Sends a chat completion request using Structured Outputs (json_schema).
+    """
+    config = get_llm_config()
+    if not config:
+        raise RuntimeError("No OpenAI API key configured (set OPENAI_API_KEY)")
+
+    client = OpenAI(api_key=config.api_key, base_url=config.base_url)
+
+    response_format: Dict[str, Any] = {
+        "type": "json_schema",
+        "json_schema": {
+            "name": schema_name,
+            "strict": True,
+            "schema": schema,
+        },
+    }
+    if schema_description:
+        response_format["json_schema"]["description"] = schema_description
+
+    response = client.chat.completions.create(
+        model=config.model,
+        messages=messages,
+        temperature=temperature,
+        top_p=float(os.getenv("LLM_TOP_P", "1") or "1"),
+        response_format=response_format,
+    )
+
+    choice = response.choices[0]
+    if getattr(choice.message, "refusal", None):
+        raise ValueError("Model refused to produce structured output")
+    if choice.finish_reason == "length":
+        raise ValueError("Model response truncated before completing structured output")
+
+    content = (choice.message.content or "").strip()
+    if not content:
+        raise ValueError("Empty model response")
+    return json.loads(content)
 
 
 def llm_enabled() -> bool:

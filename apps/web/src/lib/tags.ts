@@ -5,6 +5,10 @@ export type TagFrequency = Map<string, TagInfo>;
 
 const normalizeTag = (value: string) => value.trim().toLowerCase();
 
+function pushTag(out: string[], value: unknown) {
+  if (typeof value === 'string' && value.trim()) out.push(value);
+}
+
 export function extractAnalysisTags(analysis: unknown): string[] {
   if (!analysis || typeof analysis !== 'object') return [];
 
@@ -24,6 +28,23 @@ export function extractAnalysisTags(analysis: unknown): string[] {
   }
 
   if (!out.length) {
+    const rawHooks = (analysis as Record<string, unknown>).it_hooks;
+    if (Array.isArray(rawHooks)) {
+      for (const item of rawHooks) {
+        if (!item || typeof item !== 'object') continue;
+        const record = item as Record<string, unknown>;
+        const dataTypes = record.likely_data_types;
+        if (Array.isArray(dataTypes)) {
+          for (const entry of dataTypes) pushTag(out, entry);
+        }
+        if (!out.length && 'hook' in record) {
+          pushTag(out, record.hook);
+        }
+      }
+    }
+  }
+
+  if (!out.length) {
     const rawConcerns = (analysis as Record<string, unknown>).democratic_it_concerns;
     if (Array.isArray(rawConcerns)) {
       for (const item of rawConcerns) {
@@ -38,6 +59,7 @@ export function extractAnalysisTags(analysis: unknown): string[] {
       }
     }
   }
+
   return out
     .map((tag) => tag.trim())
     .filter((tag) => tag && tag.toLowerCase() !== 'not_applicable');

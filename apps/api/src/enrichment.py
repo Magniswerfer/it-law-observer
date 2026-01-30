@@ -1,12 +1,12 @@
 """
 Enrichment module for IT analysis using LLM.
-Runs when an LLM provider is configured (GROQ_API_KEY or OPENAI_API_KEY).
+Runs when an OpenAI API key is configured.
 """
 
 import os
 from typing import Dict, Any, Optional, Tuple
 from .supabase_rest import upsert_proposal_label
-from .llm import chat_json, llm_enabled, allow_network_pdf_fetch, get_llm_config
+from .llm import chat_json_schema, llm_enabled, allow_network_pdf_fetch, get_llm_config
 
 ENRICHMENT_PROMPT_VERSION = "1.1"
 
@@ -33,6 +33,18 @@ Svar i følgende JSON format:
     "why_it_relevant_da": "forklaring på dansk"
 }}
 """
+
+ENRICHMENT_SCHEMA: Dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {
+        "it_relevant": {"type": "boolean"},
+        "it_topics": {"type": "array", "items": {"type": "string"}},
+        "it_summary_da": {"type": "string"},
+        "why_it_relevant_da": {"type": "string"},
+    },
+    "required": ["it_relevant", "it_topics", "it_summary_da", "why_it_relevant_da"],
+}
 
 def _extract_pdf_urls(proposal_data: Dict[str, Any]) -> Tuple[Optional[str], list[str]]:
     # Prefer PDFs directly attached to the Sag dict during ingestion.
@@ -123,11 +135,13 @@ def enrich_proposal(proposal_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             pdf_excerpt=pdf_excerpt or "Ingen PDF-tekst tilgængelig"
         )
 
-        result = chat_json(
+        result = chat_json_schema(
             [
                 {"role": "system", "content": "Du er en ekspert i dansk IT-politik. Svar kun med valid JSON."},
                 {"role": "user", "content": prompt},
             ],
+            schema=ENRICHMENT_SCHEMA,
+            schema_name="proposal_enrichment_v1",
             temperature=0.3,
             max_tokens=1200,
         )

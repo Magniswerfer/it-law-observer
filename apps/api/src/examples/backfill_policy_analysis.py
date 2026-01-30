@@ -7,7 +7,7 @@ Run from `apps/api` (so imports resolve), e.g.:
   python -m src.examples.backfill_policy_analysis --max-rows 50
 
 Notes:
-  - Requires SUPABASE_URL + SUPABASE_SECRET_KEY and an LLM provider key (GROQ_API_KEY or OPENAI_API_KEY).
+  - Requires SUPABASE_URL + SUPABASE_SECRET_KEY and OPENAI_API_KEY.
   - If you want PDF law-text context, ensure PDFs are present in `raw_json` (see backfill_one_pdf.py / backfill_all_pdfs.py)
     and keep ENRICH_FETCH_PDFS=true.
 """
