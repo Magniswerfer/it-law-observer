@@ -78,7 +78,7 @@ nav {
   z-index: 1;
 }
 
-@layer base {
+ @layer base {
   a {
     text-decoration-thickness: 1px;
     text-underline-offset: 3px;
@@ -88,4 +88,11 @@ nav {
     outline: 2px solid color-mix(in oklab, var(--teal) 65%, var(--ink));
     outline-offset: 2px;
   }
+}
+
+mark {
+  background-color: color-mix(in oklab, var(--gold) 30%, transparent);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
 }

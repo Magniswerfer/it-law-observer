@@ -1,5 +1,7 @@
 'use client';
 
+import SearchableSelect from '@/components/SearchableSelect';
+
 export type SortKey =
   | 'updated_desc'
   | 'updated_asc'
@@ -45,29 +47,21 @@ export default function Filters({
       </div>
 
       <div className="mt-5 space-y-5">
-        <Field label="Emne">
-          <div className="space-y-2">
-            <input
-              value={value.topic}
-              onChange={(e) => onChange({ topic: e.target.value })}
-              placeholder="fx digitalisering"
-              list="topic-suggestions"
-              className="w-full rounded-2xl border border-[color:var(--line)] bg-white/70 px-4 py-3 text-sm text-[color:var(--ink)] shadow-sm transition placeholder:text-[color:color-mix(in_oklab,var(--muted)_80%,transparent)] hover:bg-white focus:bg-white disabled:cursor-not-allowed disabled:opacity-70"
-            />
-            <datalist id="topic-suggestions">
-              {topicSuggestions.map((t) => (
-                <option key={t} value={t} />
-              ))}
-            </datalist>
-          </div>
-        </Field>
-
         <Field label="Søgning">
           <input
             value={value.q}
             onChange={(e) => onChange({ q: e.target.value })}
             placeholder="Søg i titel, resume, IT-opsummering…"
             className="w-full rounded-2xl border border-[color:var(--line)] bg-white/70 px-4 py-3 text-sm text-[color:var(--ink)] shadow-sm transition placeholder:text-[color:color-mix(in_oklab,var(--muted)_80%,transparent)] hover:bg-white focus:bg-white"
+          />
+        </Field>
+
+        <Field label="Emne">
+          <SearchableSelect
+            value={value.topic}
+            onChange={(topic) => onChange({ topic })}
+            placeholder="Vælg eller skriv et emne"
+            options={topicSuggestions}
           />
         </Field>
 

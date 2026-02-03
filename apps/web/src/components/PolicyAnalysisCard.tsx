@@ -174,36 +174,35 @@ export function PolicyAnalysisCard(props: {
 
   return (
     <section className="relative">
-      <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
-        <div className="relative overflow-hidden rounded-[32px] border border-[color:var(--line)] bg-[color:color-mix(in_oklab,var(--paper-2)_28%,white)] p-6 shadow-[0_24px_80px_rgba(18,32,50,0.14)] sm:p-8">
-          <div className="pointer-events-none absolute inset-0">
-            <div className="absolute -right-40 top-[-200px] h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle_at_top,rgba(42,107,255,0.22),transparent_70%)]" />
-            <div className="absolute -left-36 bottom-[-220px] h-[460px] w-[460px] rounded-full bg-[radial-gradient(circle_at_top,rgba(255,168,76,0.2),transparent_70%)]" />
-          </div>
-
-          <div className="relative">
-            <div className="min-w-0">
-              <div className="text-[11px] uppercase tracking-[0.24em] text-[color:var(--muted)]">
-                Demokratisk kontrol • digital suverænitet • borgerrettigheder
-              </div>
-              <h2 className="mt-2 font-[family-name:var(--font-serif)] text-3xl tracking-tight text-[color:var(--ink)] sm:text-4xl">
-                Demokratisk IT-analyse
-              </h2>
-              <p className="mt-3 text-sm leading-relaxed text-[color:var(--ink-2)]">
-                Konkrete krav, IT-koblinger og spørgsmål til demokratisk kontrol.
-              </p>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="space-y-6">
+          <div className="relative overflow-hidden rounded-[32px] border border-[color:var(--line)] bg-[color:color-mix(in_oklab,var(--paper-2)_28%,white)] p-6 shadow-[0_24px_80px_rgba(18,32,50,0.14)] sm:p-8">
+            <div className="pointer-events-none absolute inset-0">
+              <div className="absolute -right-40 top-[-200px] h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle_at_top,rgba(42,107,255,0.22),transparent_70%)]" />
+              <div className="absolute -left-36 bottom-[-220px] h-[460px] w-[460px] rounded-full bg-[radial-gradient(circle_at_top,rgba(255,168,76,0.2),transparent_70%)]" />
             </div>
 
-            <div className="mt-6 rounded-3xl border border-[color:var(--line)] bg-white/70 p-5">
-              <SectionTitle title="Kort overblik" />
-              <div className="mt-4 grid gap-4">
-                <div className="border-l-2 border-[color:color-mix(in_oklab,var(--teal)_40%,transparent)] pl-4">
+            <div className="relative">
+              <div className="min-w-0">
+                <div className="text-[11px] uppercase tracking-[0.24em] text-[color:var(--muted)]">
+                  Demokratisk kontrol • digital suverænitet • borgerrettigheder
+                </div>
+                <h2 className="mt-2 font-[family-name:var(--font-serif)] text-3xl tracking-tight text-[color:var(--ink)] sm:text-4xl">
+                  Demokratisk IT-analyse
+                </h2>
+                <p className="mt-3 text-sm leading-relaxed text-[color:var(--ink-2)]">
+                  Konkrete krav, IT-koblinger og spørgsmål til demokratisk kontrol.
+                </p>
+              </div>
+
+              <div className="mt-6 grid gap-4 lg:grid-cols-2">
+                <div className="rounded-2xl border border-[color:var(--line)] bg-white/70 p-4">
                   <div className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--muted)]">Ét afsnit</div>
                   <div className="mt-2 text-sm leading-relaxed text-[color:var(--ink-2)]">
                     {formatValue(oneParagraph)}
                   </div>
                 </div>
-                <div className="border-l-2 border-[color:color-mix(in_oklab,var(--gold)_45%,transparent)] pl-4">
+                <div className="rounded-2xl border border-[color:var(--line)] bg-white/70 p-4">
                   <div className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--muted)]">
                     Hvad ændrer sig i praksis
                   </div>
@@ -214,172 +213,156 @@ export function PolicyAnalysisCard(props: {
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="rounded-3xl border border-[color:var(--line)] bg-white/70 p-4 shadow-[0_18px_48px_rgba(18,32,50,0.08)]">
-          <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--muted)]">Metadata</div>
-          <div className="mt-3 grid gap-2">
-            <MetaTile label="Model" tone="neutral" value={props.model} />
-            <MetaTile label="Prompt" tone="neutral" value={props.promptVersion} />
-            {analysisTimestamp ? <MetaTile label="Tid" tone="neutral" value={formatIsoToDa(analysisTimestamp)} /> : null}
-            {jurisdiction ? <MetaTile label="Jurisdiktion" tone="neutral" value={jurisdiction} /> : null}
-            {lawType ? <MetaTile label="Type" tone="neutral" value={labelize(lawType)} /> : null}
+          <div className="rounded-3xl border border-[color:var(--line)] bg-white/70 p-5">
+            <SectionTitle title="Risici uden ændringer" />
+            <div className="mt-4 text-sm text-[color:var(--ink-2)]">
+              {risks.length ? (
+                <ol className="grid gap-3">
+                  {risks.map((item, idx) => (
+                    <li key={idx} className="relative rounded-2xl border border-[color:var(--line)] bg-white/80 px-4 py-3 pl-11">
+                      <span className="absolute left-3 top-3 inline-flex h-6 w-6 items-center justify-center rounded-full border border-[color:var(--line)] bg-white text-[11px] font-semibold text-[color:var(--ink-2)]">
+                        {idx + 1}
+                      </span>
+                      {formatValue(item)}
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <EmptyState label="Ingen risici angivet." />
+              )}
+            </div>
           </div>
-        </div>
-      </div>
 
-      <div className="mt-8 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-        <div className="rounded-3xl border border-[color:var(--line)] bg-white/70 p-5">
-          <SectionTitle title="Risici uden ændringer" />
-          <div className="mt-4 text-sm text-[color:var(--ink-2)]">
-            {risks.length ? (
-              <ul className="grid gap-2">
-                {risks.map((item, idx) => (
-                  <li key={idx} className="rounded-xl bg-white/75 px-3 py-2">
-                    {formatValue(item)}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <EmptyState label="Ingen risici angivet." />
-            )}
-          </div>
-        </div>
-
-        <div className="rounded-3xl border border-[color:var(--line)] bg-white/70 p-5">
-          <SectionTitle title="Positive elementer at bevare" />
-          <div className="mt-4 text-sm text-[color:var(--ink-2)]">
-            {positives.length ? (
-              <ul className="grid gap-2">
-                {positives.map((item, idx) => (
-                  <li key={idx} className="rounded-xl bg-white/75 px-3 py-2">
-                    {formatValue(item)}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <EmptyState label="Ingen positive elementer angivet." />
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-8 rounded-3xl bg-[color:color-mix(in_oklab,var(--paper-2)_24%,white)] p-5 sm:p-6">
-        <SectionTitle title="IT-koblinger" />
-        {hooks.length ? (
-          <div className="mt-4 grid gap-3 lg:grid-cols-2">
-            {hooks.map((item, idx) => {
-              if (!isRecord(item)) {
-                return (
-                  <div key={idx} className="rounded-2xl border border-[color:var(--line)] bg-white/80 p-4 text-sm text-[color:var(--ink-2)]">
-                    {formatValue(item, 'Ikke angivet.')}
-                  </div>
-                );
-              }
-              const hook = asString(item.hook) ?? `Hook ${idx + 1}`;
-              const dataTypes = asArray(item.likely_data_types) ?? [];
-              const operator = asString(item.who_might_run_it) ?? 'uklart; bør afklares';
-              return (
-                <div key={idx} className="rounded-2xl border border-[color:var(--line)] bg-white/80 p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] shadow-sm ${badgeTone('neutral')}`}>
-                      Hook #{idx + 1}
-                    </span>
-                    <span className="text-xs text-[color:var(--muted)]">Drift: {operator}</span>
-                  </div>
-                  <div className="mt-3 text-sm font-medium text-[color:var(--ink)]">{hook}</div>
-                  <div className="mt-2 text-sm leading-relaxed text-[color:var(--ink-2)]">
-                    {formatValue(item.why_it_implies_it_systems_or_data)}
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {dataTypes.length ? (
-                      dataTypes.map((entry, dataIdx) => (
-                        <span
-                          key={dataIdx}
-                          className="inline-flex items-center rounded-full border border-[color:var(--line)] bg-[color:color-mix(in_oklab,var(--paper-2)_60%,white)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--ink-2)]"
-                        >
-                          {formatValue(entry, 'ukendt datatype')}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-xs text-[color:var(--muted)]">Ingen datatyper angivet.</span>
-                    )}
-                  </div>
-                  <div className="mt-3">
-                    <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">
-                      Privatliv & sikkerhedsflade
-                    </div>
-                    <div className="mt-2 text-sm leading-relaxed text-[color:var(--ink-2)]">
-                      {formatValue(item.privacy_or_security_surface)}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="mt-4">
-            <EmptyState label="Ingen IT-koblinger angivet." />
-          </div>
-        )}
-      </div>
-
-      <div className="mt-8 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-        <div className="rounded-3xl bg-[color:color-mix(in_oklab,var(--paper-2)_22%,white)] p-5 sm:p-6">
-          <SectionTitle title="Demokratiske ændringskrav" />
-          {requests.length ? (
-            <div className="mt-4 grid gap-3 lg:grid-cols-2">
-              {requests.map((item, idx) => {
-                if (!isRecord(item)) {
+          <div className="rounded-3xl bg-[color:color-mix(in_oklab,var(--paper-2)_22%,white)] p-5 sm:p-6">
+            <SectionTitle title="Demokratiske ændringskrav" />
+            {requests.length ? (
+              <div className="mt-4 grid gap-3">
+                {requests.map((item, idx) => {
+                  if (!isRecord(item)) {
+                    return (
+                      <div key={idx} className="rounded-2xl border border-[color:var(--line)] bg-white/80 p-4 text-sm text-[color:var(--ink-2)]">
+                        {formatValue(item, 'Ikke angivet.')}
+                      </div>
+                    );
+                  }
+                  const targetIndex = typeof item.targets_hook_index === 'number' ? item.targets_hook_index : null;
+                  const targetHook = targetIndex != null && hooks[targetIndex] && isRecord(hooks[targetIndex])
+                    ? asString(hooks[targetIndex]?.hook)
+                    : null;
                   return (
-                    <div key={idx} className="rounded-2xl border border-[color:var(--line)] bg-white/80 p-4 text-sm text-[color:var(--ink-2)]">
-                      {formatValue(item, 'Ikke angivet.')}
+                    <div key={idx} className="rounded-2xl border border-[color:var(--line)] bg-white/85 p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="inline-flex items-center rounded-full border border-[color:var(--line)] bg-white px-2.5 py-1 text-[11px] font-semibold text-[color:var(--ink-2)]">
+                          Krav {idx + 1}
+                        </span>
+                        <span className="text-xs text-[color:var(--muted)]">
+                          {targetIndex != null ? `Relateret hook #${targetIndex + 1}` : 'Hook: uklart'}
+                        </span>
+                      </div>
+                      {targetHook ? (
+                        <div className="mt-2 text-xs text-[color:var(--muted)]">{targetHook}</div>
+                      ) : null}
+                      <div className="mt-3 text-sm font-medium text-[color:var(--ink)]">
+                        {formatValue(item.request)}
+                      </div>
+                      <div className="mt-2 text-sm leading-relaxed text-[color:var(--ink-2)]">
+                        {formatValue(item.rationale)}
+                      </div>
+                      <div className="mt-2 text-sm leading-relaxed text-[color:var(--ink-2)]">
+                        <span className="font-medium text-[color:var(--ink)]">Implementering: </span>
+                        {formatValue(item.implementation_hint)}
+                      </div>
                     </div>
                   );
-                }
-                const targetIndex = typeof item.targets_hook_index === 'number' ? item.targets_hook_index : null;
-                const targetHook = targetIndex != null && hooks[targetIndex] && isRecord(hooks[targetIndex])
-                  ? asString(hooks[targetIndex]?.hook)
-                  : null;
-                return (
-                  <div key={idx} className="rounded-2xl border border-[color:var(--line)] bg-white/80 p-4">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-xs text-[color:var(--muted)]">Krav #{idx + 1}</span>
-                      <span className="text-xs text-[color:var(--muted)]">
-                        {targetIndex != null ? `Relateret hook #${targetIndex + 1}` : 'Hook: uklart'}
-                      </span>
+                })}
+              </div>
+            ) : (
+              <div className="mt-4">
+                <EmptyState label="Ingen ændringskrav angivet." />
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-3xl bg-[color:color-mix(in_oklab,var(--paper-2)_24%,white)] p-5 sm:p-6">
+            <SectionTitle title="IT-koblinger" />
+            {hooks.length ? (
+              <div className="mt-4 grid gap-3">
+                {hooks.map((item, idx) => {
+                  if (!isRecord(item)) {
+                    return (
+                      <div key={idx} className="rounded-2xl border border-[color:var(--line)] bg-white/80 p-4 text-sm text-[color:var(--ink-2)]">
+                        {formatValue(item, 'Ikke angivet.')}
+                      </div>
+                    );
+                  }
+                  const hook = asString(item.hook) ?? `Hook ${idx + 1}`;
+                  const dataTypes = asArray(item.likely_data_types) ?? [];
+                  const operator = asString(item.who_might_run_it) ?? 'uklart; bør afklares';
+                  return (
+                    <div key={idx} className="rounded-2xl border border-[color:var(--line)] bg-white/85 p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] shadow-sm ${badgeTone('neutral')}`}>
+                          Hook #{idx + 1}
+                        </span>
+                        <span className="text-xs text-[color:var(--muted)]">Drift: {operator}</span>
+                      </div>
+                      <div className="mt-3 text-sm font-medium text-[color:var(--ink)]">{hook}</div>
+                      <div className="mt-2 text-sm leading-relaxed text-[color:var(--ink-2)]">
+                        {formatValue(item.why_it_implies_it_systems_or_data)}
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {dataTypes.length ? (
+                          dataTypes.map((entry, dataIdx) => (
+                            <span
+                              key={dataIdx}
+                              className="inline-flex items-center rounded-full border border-[color:var(--line)] bg-[color:color-mix(in_oklab,var(--paper-2)_60%,white)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--ink-2)]"
+                            >
+                              {formatValue(entry, 'ukendt datatype')}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-xs text-[color:var(--muted)]">Ingen datatyper angivet.</span>
+                        )}
+                      </div>
+                      <div className="mt-3">
+                        <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">
+                          Privatliv & sikkerhedsflade
+                        </div>
+                        <div className="mt-2 text-sm leading-relaxed text-[color:var(--ink-2)]">
+                          {formatValue(item.privacy_or_security_surface)}
+                        </div>
+                      </div>
                     </div>
-                    {targetHook ? (
-                      <div className="mt-2 text-xs text-[color:var(--muted)]">{targetHook}</div>
-                    ) : null}
-                    <div className="mt-3 text-sm font-medium text-[color:var(--ink)]">
-                      {formatValue(item.request)}
-                    </div>
-                    <div className="mt-2 text-sm leading-relaxed text-[color:var(--ink-2)]">
-                      {formatValue(item.rationale)}
-                    </div>
-                    <div className="mt-2 text-sm leading-relaxed text-[color:var(--ink-2)]">
-                      <span className="font-medium text-[color:var(--ink)]">Implementering: </span>
-                      {formatValue(item.implementation_hint)}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="mt-4">
-              <EmptyState label="Ingen ændringskrav angivet." />
-            </div>
-          )}
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="mt-4">
+                <EmptyState label="Ingen IT-koblinger angivet." />
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="grid gap-4">
+        <aside className="space-y-6">
+          <div className="rounded-3xl border border-[color:var(--line)] bg-white/70 p-5 shadow-[0_18px_48px_rgba(18,32,50,0.08)]">
+            <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--muted)]">Metadata</div>
+            <div className="mt-3 grid gap-2">
+              <MetaTile label="Model" tone="neutral" value={props.model} />
+              <MetaTile label="Prompt" tone="neutral" value={props.promptVersion} />
+              {analysisTimestamp ? <MetaTile label="Tid" tone="neutral" value={formatIsoToDa(analysisTimestamp)} /> : null}
+              {jurisdiction ? <MetaTile label="Jurisdiktion" tone="neutral" value={jurisdiction} /> : null}
+              {lawType ? <MetaTile label="Type" tone="neutral" value={labelize(lawType)} /> : null}
+            </div>
+          </div>
+
           <div className="rounded-3xl bg-[color:color-mix(in_oklab,var(--paper-2)_20%,white)] p-5 sm:p-6">
             <SectionTitle title="Spørgsmål der bør stilles" subtitle="inkl. faste kontrolspørgsmål" />
             {combinedQuestions.length ? (
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <div className="mt-4 columns-1 gap-4 sm:columns-2 [column-fill:balance]">
                 {combinedQuestions.map((item, idx) => (
-                  <div key={idx} className="rounded-2xl border border-[color:var(--line)] bg-white/80 p-4">
+                  <div key={idx} className="mb-4 break-inside-avoid rounded-2xl border border-[color:var(--line)] bg-white/80 p-4">
                     <div className="text-sm font-medium text-[color:var(--ink)]">{formatValue(item.question)}</div>
                     <div className="mt-2 text-sm leading-relaxed text-[color:var(--ink-2)]">
                       {formatValue(item.why_it_matters)}
@@ -397,17 +380,17 @@ export function PolicyAnalysisCard(props: {
           <div className="rounded-3xl bg-[color:color-mix(in_oklab,var(--paper-2)_20%,white)] p-5 sm:p-6">
             <SectionTitle title="Lovtekstforslag" />
             {amendments.length ? (
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <div className="mt-4 columns-1 gap-4 sm:columns-2 [column-fill:balance]">
                 {amendments.map((item, idx) => {
                   if (!isRecord(item)) {
                     return (
-                      <div key={idx} className="rounded-2xl border border-[color:var(--line)] bg-white/80 p-4 text-sm text-[color:var(--ink-2)]">
+                      <div key={idx} className="mb-4 break-inside-avoid rounded-2xl border border-[color:var(--line)] bg-white/80 p-4 text-sm text-[color:var(--ink-2)]">
                         {formatValue(item, 'Ikke angivet.')}
                       </div>
                     );
                   }
                   return (
-                    <div key={idx} className="rounded-2xl border border-[color:var(--line)] bg-white/80 p-4">
+                    <div key={idx} className="mb-4 break-inside-avoid rounded-2xl border border-[color:var(--line)] bg-white/80 p-4">
                       <div className="text-sm font-medium text-[color:var(--ink)]">{formatValue(item.short_clause)}</div>
                       <div className="mt-2 text-sm leading-relaxed text-[color:var(--ink-2)]">
                         <span className="font-medium text-[color:var(--ink)]">Placering: </span>
@@ -423,7 +406,24 @@ export function PolicyAnalysisCard(props: {
               </div>
             )}
           </div>
-        </div>
+
+          <div className="rounded-3xl border border-[color:var(--line)] bg-white/70 p-5">
+            <SectionTitle title="Positive elementer at bevare" />
+            <div className="mt-4 text-sm text-[color:var(--ink-2)]">
+              {positives.length ? (
+                <div className="columns-1 gap-3 sm:columns-2 [column-fill:balance]">
+                  {positives.map((item, idx) => (
+                    <div key={idx} className="mb-3 break-inside-avoid rounded-2xl border border-[color:var(--line)] bg-white/75 px-3 py-2">
+                      {formatValue(item)}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState label="Ingen positive elementer angivet." />
+              )}
+            </div>
+          </div>
+        </aside>
       </div>
 
       <details className="mt-6 rounded-2xl border border-[color:var(--line)] bg-white/70 p-4">
